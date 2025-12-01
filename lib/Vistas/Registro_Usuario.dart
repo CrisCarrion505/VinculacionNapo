@@ -131,7 +131,7 @@ Widget build(BuildContext context) {
                       ),
                       const SizedBox(height: 20),
                       DropdownButtonFormField<String>(
-                        value: _role,
+                        initialValue: _role,
                         items: ['Líder', 'Comunidad'].map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,

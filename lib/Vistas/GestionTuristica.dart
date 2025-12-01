@@ -5,7 +5,7 @@ import 'package:proyecto_vinculacion/Servicios/turismo_service.dart';
 
 /// Ejemplo de widget con TabBar/TabBarView para cada categoría
 class TurismoComunitario extends StatefulWidget {
-  const TurismoComunitario({Key? key}) : super(key: key);
+  const TurismoComunitario({super.key});
 
   @override
   State<TurismoComunitario> createState() => _TurismoComunitarioState();
