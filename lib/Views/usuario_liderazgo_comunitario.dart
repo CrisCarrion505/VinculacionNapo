@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:proyecto_vinculacion/Modelos/liderazgo_model.dart';
 import 'package:proyecto_vinculacion/Servicios/liderazgo_service.dart';
-import 'package:proyecto_vinculacion/Utilidades/validar_cedula_ecuador.dart';
+import 'package:proyecto_vinculacion/validar_cedula_ecuador.dart';
 
 class LiderazgoComunitario extends StatefulWidget {
   const LiderazgoComunitario({super.key});
@@ -50,13 +50,13 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
   String? _productoServicioError;
   String? _materiaPrimaSalariosError;
   
-  List<Map<String, dynamic>> _ventas = [];
-  List<Map<String, dynamic>> _gastos = [];
+  final List<Map<String, dynamic>> _ventas = [];
+  final List<Map<String, dynamic>> _gastos = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);  // Cambia de 4 a 2
     
     // Agregar listeners para validación en tiempo real
     _cedulaController.addListener(_validarCedula);
@@ -373,8 +373,6 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
           tabs: const [
             Tab(icon: Icon(Icons.point_of_sale), text: "Ventas"),
             Tab(icon: Icon(Icons.payment), text: "Gastos"),
-            Tab(icon: Icon(Icons.analytics), text: "Gestión Financiera"),
-            Tab(icon: Icon(Icons.people), text: "Funciones"),
           ],
         ),
       ),
@@ -383,8 +381,6 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
         children: [
           _buildRegistroVentas(),
           _buildGastosOperativos(),
-          _buildGestionFinanciera(),
-          _buildFuncionesLider(),
         ],
       ),
     );

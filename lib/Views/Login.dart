@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:proyecto_vinculacion/Vistas/Registro_Usuario.dart';
-import 'Lideres_view.dart';
-import 'Comunidad_view.dart';
+import 'Registro_Usuario.dart';
+import 'usuario_view.dart';
+import 'lider_view.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -249,16 +249,18 @@ class _LoginPageState extends State<LoginPage> {
     User? user = FirebaseAuth.instance.currentUser;
     FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).get().then(
       (DocumentSnapshot documentSnapshot) {
+        if (!mounted) return;
+        
         if (documentSnapshot.exists) {
           if (documentSnapshot.get('role') == "Líder") {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => LiderComunidad()),
+              MaterialPageRoute(builder: (context) => const LiderComunidad()),
             );
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => MiembroComunidad()),
+              MaterialPageRoute(builder: (context) => const MiembroComunidad()),
             );
           }
         } else {
@@ -270,7 +272,15 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       },
-    );
+    ).catchError((error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al obtener datos del usuario: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
   }
 
   @override

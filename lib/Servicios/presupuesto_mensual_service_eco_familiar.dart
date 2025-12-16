@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:proyecto_vinculacion/Modelos/presupuesto_comunidad_model.dart';
+import 'package:proyecto_vinculacion/Modelos/presupuesto_mensual_model_eco_familiar.dart';
 
 class PresupuestoService {
   final CollectionReference _presupuestoRef =

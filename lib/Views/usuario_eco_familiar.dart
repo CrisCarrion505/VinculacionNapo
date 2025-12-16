@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto_vinculacion/Vistas/IngresosEgresosComunidad.dart';
-import 'package:proyecto_vinculacion/Vistas/Presupuesto_comunidad.dart';
+import 'package:proyecto_vinculacion/Vistas/usuario_presupuesto_eco_familiar.dart';
 
 class AdminEcoFamiliar extends StatefulWidget {
   const AdminEcoFamiliar({super.key});
