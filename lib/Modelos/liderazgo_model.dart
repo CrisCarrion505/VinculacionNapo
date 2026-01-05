@@ -24,7 +24,6 @@ class RegistroVentasModel {
       'ruc': ruc,
       'registro_ventas': registroVentas,
       'ventas': ventas,
-      'fecha_registro': DateTime.now().toIso8601String(),
     };
   }
   
@@ -54,7 +53,6 @@ class GastosOperativosModel {
     return {
       'correo': correo,
       'gastos': gastos,
-      'fecha_registro': DateTime.now().toIso8601String(),
     };
   }
 
@@ -95,7 +93,6 @@ class GestionFinancieraModel {
       'presupuesto_mensual': presupuestoMensual,
       'fondos_emergencia': fondosEmergencia,
       'registros_contables': registrosContables,
-      'fecha_registro': DateTime.now().toIso8601String(),
     };
   }
 

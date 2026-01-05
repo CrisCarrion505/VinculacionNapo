@@ -7,11 +7,14 @@ class LiderazgoService {
   // Guardar Registro de Ventas
   Future<void> addRegistroVentas(RegistroVentasModel registro, String correo) async {
     try {
+      final data = registro.toMap();
+      data['correo'] = correo;
+      data['timestamp'] = FieldValue.serverTimestamp();
       await _firestore
           .collection('liderazgo_comunitario')
           .doc(correo)
           .collection('ventas')
-          .add(registro.toMap());
+          .add(data);
     } catch (e) {
       throw Exception('Error al guardar registro de ventas: $e');
     }
@@ -38,11 +41,14 @@ class LiderazgoService {
   // Guardar Gastos Operativos
   Future<void> addGastosOperativos(GastosOperativosModel gastos, String correo) async {
     try {
+      final data = gastos.toMap();
+      data['correo'] = correo;
+      data['timestamp'] = FieldValue.serverTimestamp();
       await _firestore
           .collection('liderazgo_comunitario')
           .doc(correo)
           .collection('gastos')
-          .add(gastos.toMap());
+          .add(data);
     } catch (e) {
       throw Exception('Error al guardar gastos: $e');
     }
@@ -69,11 +75,14 @@ class LiderazgoService {
   // Guardar Gestión Financiera
   Future<void> addGestionFinanciera(GestionFinancieraModel gestion, String correo) async {
     try {
+      final data = gestion.toMap();
+      data['correo'] = correo;
+      data['timestamp'] = FieldValue.serverTimestamp();
       await _firestore
           .collection('liderazgo_comunitario')
           .doc(correo)
           .collection('gestion_financiera')
-          .add(gestion.toMap());
+          .add(data);
     } catch (e) {
       throw Exception('Error al guardar gestión financiera: $e');
     }

@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto_vinculacion/Modelos/presupuesto_mensual_model_eco_familiar.dart';
 
 class PresupuestoService {
-  final CollectionReference _presupuestoRef =
-      FirebaseFirestore.instance.collection('Presupuestos_comunidad');
+    final CollectionReference _presupuestoRef =
+      FirebaseFirestore.instance.collection('presupuestos_comunidad');
 
   /// Agregar un nuevo presupuesto a Firebase
   Future<void> agregarPresupuesto(PresupuestoComunidad presupuesto) async {

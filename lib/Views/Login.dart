@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Registro_Usuario.dart';
-import 'usuario_view.dart';
-import 'lider_view.dart';
+import 'dashboard_miembro.dart';
+import 'dashboard_lider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -255,12 +255,12 @@ class _LoginPageState extends State<LoginPage> {
           if (documentSnapshot.get('role') == "Líder") {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LiderComunidad()),
+              MaterialPageRoute(builder: (context) => const DashboardLider()),
             );
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const MiembroComunidad()),
+              MaterialPageRoute(builder: (context) => const DashboardMiembro()),
             );
           }
         } else {

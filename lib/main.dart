@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:proyecto_vinculacion/Vistas/Login.dart';
+import 'package:proyecto_vinculacion/Views/Login.dart';
 import 'package:proyecto_vinculacion/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 

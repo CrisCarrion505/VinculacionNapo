@@ -14,7 +14,7 @@ class FirebaseTurismoService {
         'categoria': 'Lugar Turístico',
         'correo': correo,
         'data': data,
-        'createdAt': FieldValue.serverTimestamp(),
+        'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception("Error al agregar Lugar Turístico: $e");
@@ -28,7 +28,7 @@ class FirebaseTurismoService {
         'categoria': 'Registro de visitante',
         'correo': correo,
         'data': data,
-        'createdAt': FieldValue.serverTimestamp(),
+        'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception("Error al agregar Registro de visitante: $e");
@@ -44,7 +44,7 @@ class FirebaseTurismoService {
         'correo': correo,
         'nombre': model.nombre,
         'servicios': model.servicios,
-        'createdAt': FieldValue.serverTimestamp(),
+        'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception("Error al agregar Emprendimiento Comunitario Turístico: $e");
@@ -60,7 +60,7 @@ class FirebaseTurismoService {
         'correo': correo,
         'nombre': model.nombre,
         'acciones': model.acciones,
-        'createdAt': FieldValue.serverTimestamp(),
+        'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception("Error al agregar Estrategia: $e");
