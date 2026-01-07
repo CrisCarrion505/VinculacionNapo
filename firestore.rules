@@ -1,0 +1,205 @@
+// REGLAS DE SEGURIDAD FIRESTORE - PROYECTO VINCULACIÓN NAPO
+// Versión: 2.0 - Con módulos de Salud Comunitaria y Seguridad Alimentaria
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ================== FUNCIONES AUXILIARES ==================
+    
+    // Verificar si el usuario autenticado es Líder
+    function isLider() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'Líder';
+    }
+    
+    // Verificar si el correo coincide (para miembros)
+    function isOwnerByEmail() {
+      return request.auth != null && request.auth.token.email == resource.data.correo;
+    }
+    
+    // Verificar si el usuario intenta escribir su correo
+    function isCreatingWithOwnEmail() {
+      return request.auth != null && request.resource.data.correo == request.auth.token.email;
+    }
+
+    // ================== COLECCIÓN: usuarios ==================
+    // Almacena información básica de los usuarios
+    // Campos: nombre, correo, role (Miembro/Líder), fechaRegistro
+    match /usuarios/{userId} {
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['nombre','correo','role','fechaRegistro'])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 3
+        && request.resource.data.correo is string
+        && request.resource.data.role in ['Miembro', 'Líder']
+        && request.resource.data.fechaRegistro is timestamp;
+
+      // Permite que un usuario lea su propio documento (necesario para isLider())
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Permite que un líder lea otros documentos de usuario
+      allow read: if request.auth != null && isLider();
+      
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ================== COLECCIÓN: presupuestos_comunidad ==================
+    // Economía Familiar
+    match /presupuestos_comunidad/{docId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.fecha is timestamp
+        && request.resource.data.totalIngresos is number
+        && request.resource.data.totalEgresos is number
+        && request.resource.data.ingresos is list
+        && request.resource.data.egresos is list;
+
+      allow read: if request.auth != null
+        && (resource.data.userId == request.auth.uid || isLider());
+
+      allow update, delete: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ================== COLECCIÓN: liderazgo_comunitario/{userEmail} - Documento raíz ==================
+    // Permitir lectura de documentos raíz y subcollecciones
+    match /liderazgo_comunitario/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ================== COLECCIONES DE TURISMO ==================
+    match /lugares_turisticos/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.correo is string;
+
+      allow read: if request.auth != null 
+        && (request.auth.token.email == resource.data.correo || isLider());
+      
+      allow update, delete: if request.auth != null 
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    match /visitantes/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.correo is string;
+
+      allow read: if request.auth != null 
+        && (request.auth.token.email == resource.data.correo || isLider());
+      
+      allow update, delete: if request.auth != null 
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    match /emp_comun_turistico/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.correo is string;
+
+      allow read: if request.auth != null 
+        && (request.auth.token.email == resource.data.correo || isLider());
+      
+      allow update, delete: if request.auth != null 
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    match /estra_fort_turismo_comun/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.correo is string;
+
+      allow read: if request.auth != null 
+        && (request.auth.token.email == resource.data.correo || isLider());
+      
+      allow update, delete: if request.auth != null 
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    // ================== COLECCIÓN: salud_comunitaria ==================
+    match /salud_comunitaria/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.enfermedad is string
+        && request.resource.data.enfermedad.size() > 0
+        && request.resource.data.rangoEdad is string
+        && request.resource.data.rangoEdad.size() > 0
+        && request.resource.data.edadExacta is number
+        && request.resource.data.edadExacta >= 0
+        && request.resource.data.edadExacta <= 150
+        && request.resource.data.genero is string
+        && request.resource.data.genero.size() > 0
+        && request.resource.data.sintomasSeleccionados is list
+        && request.resource.data.sintomasSeleccionados.size() > 0
+        && request.resource.data.otrosSintomas is string
+        && request.resource.data.otrosSintomas.size() <= 200
+        && request.resource.data.fechaRegistro is timestamp;
+
+      allow read: if request.auth != null
+        && (request.auth.token.email == resource.data.correo || isLider());
+
+      allow update: if request.auth != null
+        && request.auth.token.email == resource.data.correo
+        && request.resource.data.correo == resource.data.correo;
+
+      allow delete: if request.auth != null
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    // ================== COLECCIÓN: seguridad_alimentaria ==================
+    match /seguridad_alimentaria/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.alimentoEscaso is string
+        && request.resource.data.alimentoEscaso.size() > 0
+        && request.resource.data.nombreProveedor is string
+        && request.resource.data.nombreProveedor.size() >= 3
+        && request.resource.data.nombreProveedor.size() <= 100
+        && request.resource.data.telefonoProveedor is string
+        && request.resource.data.telefonoProveedor.size() >= 10
+        && request.resource.data.frecuenciaEscasez is string
+        && request.resource.data.frecuenciaEscasez.size() > 0
+        && request.resource.data.cantidadNecesaria is number
+        && request.resource.data.cantidadNecesaria > 0
+        && request.resource.data.unidad is string
+        && request.resource.data.unidad.size() > 0
+        && request.resource.data.prioridad in ['Baja', 'Media', 'Alta', 'Urgente']
+        && request.resource.data.razonEscasez is string
+        && request.resource.data.razonEscasez.size() > 0
+        && request.resource.data.razonEscasezOtro is string
+        && request.resource.data.razonEscasezOtro.size() <= 150
+        && request.resource.data.observaciones is string
+        && request.resource.data.observaciones.size() <= 250
+        && request.resource.data.ubicacion is string
+        && request.resource.data.ubicacion.size() > 0
+        && request.resource.data.fechaRegistro is timestamp;
+
+      allow read: if request.auth != null
+        && (request.auth.token.email == resource.data.correo || isLider());
+
+      allow update: if request.auth != null
+        && request.auth.token.email == resource.data.correo
+        && request.resource.data.correo == resource.data.correo
+        && (
+          request.time < resource.data.fechaRegistro + duration.value(7, 'd')
+        );
+
+      allow delete: if request.auth != null
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    // ================== REGLA POR DEFECTO: DENEGAR TODO ==================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// Notas: archivo generado desde REGLAS_FIRESTORE_COMPLETAS.txt

@@ -24,6 +24,128 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
     super.dispose();
   }
 
+  // Obtener todas las ventas de todos los miembros
+  Future<List<Map<String, dynamic>>> _getAllVentas() async {
+    List<Map<String, dynamic>> allVentas = [];
+    try {
+      print('Obteniendo documentos de liderazgo_comunitario...');
+      
+      // Consultar todos los correos en liderazgo_comunitario (cada doc tiene id = correo)
+      final membersSnapshot = await FirebaseFirestore.instance
+          .collection('liderazgo_comunitario')
+          .get();
+
+      print('Documentos encontrados: ${membersSnapshot.docs.length}');
+
+      // Para cada miembro, obtener sus ventas
+      for (var memberDoc in membersSnapshot.docs) {
+        final correo = memberDoc.id;
+        print('Obteniendo ventas de: $correo');
+        
+        try {
+          final ventasSnapshot = await FirebaseFirestore.instance
+              .collection('liderazgo_comunitario')
+              .doc(correo)
+              .collection('ventas')
+              .orderBy('timestamp', descending: true)
+              .get();
+
+          print('  Ventas encontradas: ${ventasSnapshot.docs.length}');
+
+          for (var ventaDoc in ventasSnapshot.docs) {
+            final data = ventaDoc.data();
+            final timestamp = (data['timestamp'] is Timestamp) 
+                ? data['timestamp'] as Timestamp 
+                : Timestamp.now();
+            allVentas.add({
+              'miembro': correo,
+              'producto': data['producto'] ?? 'Sin especificar',
+              'cantidad': data['cantidad'] ?? 0,
+              'precio': data['precio'] ?? 0,
+              'total': data['total'] ?? 0,
+              'timestamp': timestamp,
+            });
+          }
+        } catch (e) {
+          print('Error obteniendo ventas de $correo: $e');
+        }
+      }
+      
+      // Ordenar por timestamp de mayor a menor
+      if (allVentas.isNotEmpty) {
+        allVentas.sort((a, b) {
+          final tsA = a['timestamp'] as Timestamp;
+          final tsB = b['timestamp'] as Timestamp;
+          return tsB.compareTo(tsA);
+        });
+      }
+      print('Total ventas compiladas: ${allVentas.length}');
+    } catch (e) {
+      print('Error general en _getAllVentas: $e');
+      rethrow;
+    }
+    return allVentas;
+  }
+
+  // Obtener todos los gastos de todos los miembros
+  Future<List<Map<String, dynamic>>> _getAllGastos() async {
+    List<Map<String, dynamic>> allGastos = [];
+    try {
+      print('Obteniendo documentos de liderazgo_comunitario...');
+      
+      final membersSnapshot = await FirebaseFirestore.instance
+          .collection('liderazgo_comunitario')
+          .get();
+
+      print('Documentos encontrados: ${membersSnapshot.docs.length}');
+
+      for (var memberDoc in membersSnapshot.docs) {
+        final correo = memberDoc.id;
+        print('Obteniendo gastos de: $correo');
+        
+        try {
+          final gastosSnapshot = await FirebaseFirestore.instance
+              .collection('liderazgo_comunitario')
+              .doc(correo)
+              .collection('gastos')
+              .orderBy('timestamp', descending: true)
+              .get();
+
+          print('  Gastos encontrados: ${gastosSnapshot.docs.length}');
+
+          for (var gastoDoc in gastosSnapshot.docs) {
+            final data = gastoDoc.data();
+            final timestamp = (data['timestamp'] is Timestamp) 
+                ? data['timestamp'] as Timestamp 
+                : Timestamp.now();
+            allGastos.add({
+              'miembro': correo,
+              'concepto': data['concepto'] ?? 'Sin especificar',
+              'monto': data['monto'] ?? 0,
+              'timestamp': timestamp,
+            });
+          }
+        } catch (e) {
+          print('Error obteniendo gastos de $correo: $e');
+        }
+      }
+      
+      // Ordenar por timestamp de mayor a menor
+      if (allGastos.isNotEmpty) {
+        allGastos.sort((a, b) {
+          final tsA = a['timestamp'] as Timestamp;
+          final tsB = b['timestamp'] as Timestamp;
+          return tsB.compareTo(tsA);
+        });
+      }
+      print('Total gastos compilados: ${allGastos.length}');
+    } catch (e) {
+      print('Error general en _getAllGastos: $e');
+      rethrow;
+    }
+    return allGastos;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,40 +182,45 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
   }
 
   Widget _buildRegistroVentasView() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collectionGroup('ventas')
-          .orderBy('fecha_registro', descending: true)
-          .snapshots(),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _getAllVentas(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Text('No hay registros de ventas'),
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}'),
+              ],
+            ),
           );
         }
 
-        final registros = snapshot.data!.docs;
+        final allVentas = snapshot.data ?? [];
 
-        final allVentas = <Map<String, dynamic>>[];
-        for (var doc in registros) {
-          final data = doc.data() as Map<String, dynamic>;
-          final correo = data['correo'] ?? 'Desconocido';
-          final ventas = List<Map<String, dynamic>>.from(data['ventas'] ?? []);
-          final fechaRegistro = DateTime.tryParse(data['fecha_registro'] ?? '') ?? DateTime.now();
-          for (var venta in ventas) {
-            allVentas.add({
-              'miembro': correo,
-              'fecha': venta['fecha'] ?? fechaRegistro.toIso8601String(),
-              'producto': venta['producto'] ?? 'Sin especificar',
-              'cantidad': venta['cantidad'] ?? 0,
-              'precio': venta['precio'] ?? 0,
-              'total': venta['total'] ?? 0,
-            });
-          }
+        if (allVentas.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.info, color: Colors.grey, size: 48),
+                const SizedBox(height: 16),
+                const Text('No hay registros de ventas guardados'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Los miembros deben guardar ventas en su sección\nde Liderazgo Comunitario',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
@@ -102,7 +229,7 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
           itemBuilder: (context, index) {
             final venta = allVentas[index];
             final miembro = venta['miembro'] as String;
-            final fecha = DateTime.tryParse(venta['fecha']?.toString() ?? '') ?? DateTime.now();
+            final fecha = (venta['timestamp'] as Timestamp).toDate();
             final producto = venta['producto'] ?? 'Sin especificar';
             final cantidad = venta['cantidad'] ?? 0;
             final precio = venta['precio'] ?? 0;
@@ -172,42 +299,45 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
   }
 
   Widget _buildGastosOperativosView() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collectionGroup('gastos')
-          .orderBy('fecha_registro', descending: true)
-          .snapshots(),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _getAllGastos(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Text('No hay registros de gastos'),
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}'),
+              ],
+            ),
           );
         }
 
-        final registros = snapshot.data!.docs;
+        final allGastos = snapshot.data ?? [];
 
-        final allGastos = <Map<String, dynamic>>[];
-        for (var doc in registros) {
-          final data = doc.data() as Map<String, dynamic>;
-          final correo = data['correo'] ?? 'Desconocido';
-          final gastos = List<Map<String, dynamic>>.from(data['gastos'] ?? []);
-          final fechaRegistro = DateTime.tryParse(data['fecha_registro'] ?? '') ?? DateTime.now();
-          for (var gasto in gastos) {
-            allGastos.add({
-              'miembro': correo,
-              'fecha': gasto['fecha'] ?? fechaRegistro.toIso8601String(),
-              'materia_prima': double.tryParse(gasto['materia_prima']?.toString() ?? '0') ?? 0,
-              'salarios': double.tryParse(gasto['salarios']?.toString() ?? '0') ?? 0,
-              'servicios_publicos': double.tryParse(gasto['servicios_publicos']?.toString() ?? '0') ?? 0,
-              'comisiones': double.tryParse(gasto['comisiones']?.toString() ?? '0') ?? 0,
-              'publicidad': double.tryParse(gasto['publicidad']?.toString() ?? '0') ?? 0,
-              'alquiler': double.tryParse(gasto['alquiler']?.toString() ?? '0') ?? 0,
-            });
-          }
+        if (allGastos.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.info, color: Colors.grey, size: 48),
+                const SizedBox(height: 16),
+                const Text('No hay registros de gastos guardados'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Los miembros deben guardar gastos en su sección\nde Liderazgo Comunitario',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
@@ -216,13 +346,9 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
           itemBuilder: (context, index) {
             final gasto = allGastos[index];
             final miembro = gasto['miembro'] as String;
-            final fecha = DateTime.tryParse(gasto['fecha']?.toString() ?? '') ?? DateTime.now();
-            final materiaPrima = gasto['materia_prima'] ?? 0;
-            final salarios = gasto['salarios'] ?? 0;
-            final otros = (gasto['servicios_publicos'] ?? 0) +
-                (gasto['comisiones'] ?? 0) +
-                (gasto['publicidad'] ?? 0) +
-                (gasto['alquiler'] ?? 0);
+            final fecha = (gasto['timestamp'] as Timestamp).toDate();
+            final concepto = gasto['concepto'] ?? 'Sin especificar';
+            final monto = gasto['monto'] ?? 0;
 
             return Card(
               elevation: 4,
@@ -261,14 +387,10 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Materia Prima: \$$materiaPrima'),
+                          Text('Concepto: $concepto', style: const TextStyle(fontSize: 14)),
                           const SizedBox(height: 8),
-                          Text('Salarios: \$$salarios'),
-                          const SizedBox(height: 8),
-                          Text('Otros Gastos: \$$otros'),
-                          const Divider(),
                           Text(
-                            'Total: \$${materiaPrima + salarios + otros}',
+                            'Monto: \$$monto',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -288,3 +410,4 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
     );
   }
 }
+

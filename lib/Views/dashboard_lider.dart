@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'Lider/lider_eco_familiar_view.dart';
 import 'Lider/lider_liderazgo_view.dart';
 import 'Lider/lider_gestion_turistica_view.dart';
+import 'Lider/lider_salud_view.dart';
+import 'Lider/lider_seguridad_alimentaria_view.dart';
 
 class DashboardLider extends StatelessWidget {
   const DashboardLider({super.key});
@@ -97,6 +99,36 @@ class DashboardLider extends StatelessWidget {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const LiderGestionTuristicaView(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildModuleCard(
+                              context,
+                              title: 'Salud Comunitaria',
+                              description: 'Ver registros de salud de miembros',
+                              icon: Icons.health_and_safety,
+                              color: Colors.red,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LiderSaludView(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildModuleCard(
+                              context,
+                              title: 'Seguridad Alimentaria',
+                              description: 'Ver reportes alimentarios',
+                              icon: Icons.lunch_dining,
+                              color: Colors.purple,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LiderSeguridadAlimentariaView(),
                                   ),
                                 );
                               },

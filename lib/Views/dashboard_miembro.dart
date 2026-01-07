@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'Miembro/usuario_eco_familiar.dart';
 import 'Miembro/usuario_liderazgo_comunitario.dart';
 import 'Miembro/usuario_gestion_turistica.dart' as turismo;
+import 'Miembro/usuario_salud_comunitaria.dart';
+import 'Miembro/usuario_seguridad_alimentaria.dart';
 
 class DashboardMiembro extends StatelessWidget {
   const DashboardMiembro({super.key});
@@ -97,6 +99,36 @@ class DashboardMiembro extends StatelessWidget {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const turismo.TurismoComunitario(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildModuleCard(
+                              context,
+                              title: 'Salud Comunitaria',
+                              description: 'Registra enfermedades y síntomas',
+                              icon: Icons.health_and_safety,
+                              color: Colors.red,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const UsuarioSaludComunitariaView(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildModuleCard(
+                              context,
+                              title: 'Seguridad Alimentaria',
+                              description: 'Reporta alimentos escasos',
+                              icon: Icons.lunch_dining,
+                              color: Colors.purple,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const UsuarioSeguridadAlimentariaView(),
                                   ),
                                 );
                               },

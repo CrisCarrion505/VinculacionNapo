@@ -1,0 +1,257 @@
+// REGLAS DE SEGURIDAD FIRESTORE - PROYECTO VINCULACIÓN NAPO
+// Versión: 2.0 - Con módulos de Salud Comunitaria y Seguridad Alimentaria
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ================== FUNCIONES AUXILIARES ==================
+    
+    // Verificar si el usuario autenticado es Líder
+    function isLider() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'Líder';
+    }
+    
+    // Verificar si el correo coincide (para miembros)
+    function isOwnerByEmail() {
+      return request.auth != null && request.auth.token.email == resource.data.correo;
+    }
+    
+    // Verificar si el usuario intenta escribir su correo
+    function isCreatingWithOwnEmail() {
+      return request.auth != null && request.resource.data.correo == request.auth.token.email;
+    }
+
+    // ================== COLECCIÓN: usuarios ==================
+    // Almacena información básica de los usuarios
+    // Campos: nombre, correo, role (Miembro/Líder), fechaRegistro
+    match /usuarios/{userId} {
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['nombre','correo','role','fechaRegistro'])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 3
+        && request.resource.data.correo is string
+        && request.resource.data.role in ['Miembro', 'Líder']
+        && request.resource.data.fechaRegistro is timestamp;
+
+      allow read: if request.auth != null 
+        && (request.auth.uid == userId || isLider());
+      
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ================== COLECCIÓN: presupuestos_comunidad ==================
+    // Economía Familiar
+    // Campos: userId, ingresos[], egresos[], ahorros[], inversiones[], 
+    //         totalIngresos, totalEgresos, totalAhorros, totalInversiones, saldoFinal, fecha
+    match /presupuestos_comunidad/{docId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.fecha is timestamp
+        && request.resource.data.totalIngresos is number
+        && request.resource.data.totalEgresos is number
+        && request.resource.data.ingresos is list
+        && request.resource.data.egresos is list;
+
+      allow read: if request.auth != null
+        && (resource.data.userId == request.auth.uid || isLider());
+
+      allow update, delete: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ================== COLECCIÓN: liderazgo_comunitario/{userEmail}/subcolecciones ==================
+    // Almacena Liderazgo Comunitario: ventas, gastos, gestion_financiera
+    match /liderazgo_comunitario/{userEmail}/{subcol}/{docId} {
+      allow create: if request.auth != null
+        && request.auth.token.email == userEmail
+        && isCreatingWithOwnEmail()
+        && request.resource.data.timestamp is timestamp;
+
+      allow read: if request.auth != null
+        && (request.auth.token.email == userEmail || isLider());
+
+      allow update, delete: if request.auth != null 
+        && request.auth.token.email == userEmail;
+    }
+
+    // ================== COLECCIONES DE TURISMO ==================
+    // lugares_turisticos, visitantes, emp_comun_turistico, estra_fort_turismo_comun
+    // Patrón común: el miembro crea documentos con su correo
+    match /{collectionName in ['lugares_turisticos','visitantes','emp_comun_turistico','estra_fort_turismo_comun']}/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.correo is string;
+
+      allow read: if request.auth != null 
+        && (request.auth.token.email == resource.data.correo || isLider());
+      
+      allow update, delete: if request.auth != null 
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    // ================== COLECCIÓN: salud_comunitaria ==================
+    // Nuevo módulo: Salud Comunitaria
+    // Campos: correo, enfermedad, rangoEdad, edadExacta, genero, 
+    //         sintomasSeleccionados[], otrosSintomas, fechaRegistro, observaciones
+    match /salud_comunitaria/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.enfermedad is string
+        && request.resource.data.enfermedad.size() > 0
+        && request.resource.data.rangoEdad is string
+        && request.resource.data.rangoEdad.size() > 0
+        && request.resource.data.edadExacta is number
+        && request.resource.data.edadExacta >= 0
+        && request.resource.data.edadExacta <= 150
+        && request.resource.data.genero is string
+        && request.resource.data.genero.size() > 0
+        && request.resource.data.sintomasSeleccionados is list
+        && request.resource.data.sintomasSeleccionados.size() > 0
+        && request.resource.data.otrosSintomas is string
+        && request.resource.data.otrosSintomas.size() <= 200
+        && request.resource.data.fechaRegistro is timestamp;
+
+      allow read: if request.auth != null
+        && (request.auth.token.email == resource.data.correo || isLider());
+
+      allow update: if request.auth != null
+        && request.auth.token.email == resource.data.correo
+        && request.resource.data.correo == resource.data.correo;
+
+      allow delete: if request.auth != null
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    // ================== COLECCIÓN: seguridad_alimentaria ==================
+    // Nuevo módulo: Seguridad Alimentaria
+    // Campos: correo, alimentoEscaso, nombreProveedor, telefonoProveedor,
+    //         frecuenciaEscasez, cantidadNecesaria, unidad, prioridad,
+    //         razonEscasez, razonEscasezOtro, observaciones, ubicacion,
+    //         fechaRegistro, editado
+    match /seguridad_alimentaria/{docId} {
+      allow create: if request.auth != null
+        && isCreatingWithOwnEmail()
+        && request.resource.data.alimentoEscaso is string
+        && request.resource.data.alimentoEscaso.size() > 0
+        && request.resource.data.nombreProveedor is string
+        && request.resource.data.nombreProveedor.size() >= 3
+        && request.resource.data.nombreProveedor.size() <= 100
+        && request.resource.data.telefonoProveedor is string
+        && request.resource.data.telefonoProveedor.size() >= 10
+        && request.resource.data.frecuenciaEscasez is string
+        && request.resource.data.frecuenciaEscasez.size() > 0
+        && request.resource.data.cantidadNecesaria is number
+        && request.resource.data.cantidadNecesaria > 0
+        && request.resource.data.unidad is string
+        && request.resource.data.unidad.size() > 0
+        && request.resource.data.prioridad in ['Baja', 'Media', 'Alta', 'Urgente']
+        && request.resource.data.razonEscasez is string
+        && request.resource.data.razonEscasez.size() > 0
+        && request.resource.data.razonEscasezOtro is string
+        && request.resource.data.razonEscasezOtro.size() <= 150
+        && request.resource.data.observaciones is string
+        && request.resource.data.observaciones.size() <= 250
+        && request.resource.data.ubicacion is string
+        && request.resource.data.ubicacion.size() > 0
+        && request.resource.data.fechaRegistro is timestamp;
+
+      allow read: if request.auth != null
+        && (request.auth.token.email == resource.data.correo || isLider());
+
+      allow update: if request.auth != null
+        && request.auth.token.email == resource.data.correo
+        && request.resource.data.correo == resource.data.correo
+        && (
+          // Solo si el reporte es menor a 7 días
+          request.time < resource.data.fechaRegistro + duration.value(7, 'd')
+        );
+
+      allow delete: if request.auth != null
+        && request.auth.token.email == resource.data.correo;
+    }
+
+    // ================== REGLA POR DEFECTO: DENEGAR TODO ==================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ==================== NOTAS DE IMPLEMENTACIÓN ====================
+//
+// 1. AUTENTICACIÓN:
+//    - El proyecto usa Firebase Authentication con email/password
+//    - request.auth.uid se usa para documentos "usuarios"
+//    - request.auth.token.email se usa para correo del usuario
+//
+// 2. ROLES:
+//    - "Miembro": usuario regular que crea sus propios registros
+//    - "Líder": usuario administrador que puede leer todos los registros
+//    - La función isLider() verifica el campo "role" en /usuarios/{uid}
+//
+// 3. VALIDACIONES:
+//    - Cada colección tiene validaciones básicas de tipos y tamaños
+//    - Para teléfono: se almacena solo números (10+ dígitos)
+//    - Para campos de texto: se limita longitud máxima
+//    - Para números: se valida que sean positivos
+//
+// 4. MÓDULOS NUEVOS (v2.0):
+//    - salud_comunitaria: requiere enfermedad, síntomas, edad exacta
+//    - seguridad_alimentaria: requiere alimento, proveedor, frecuencia, cantidad
+//    - Ambos requieren validaciones estrictas de datos
+//
+// 5. EDICIÓN LIMITADA (Seguridad Alimentaria):
+//    - Solo permite editar reportes menores a 7 días
+//    - El campo "editado" marca si fue modificado
+//    - La lógica está en el servicio (no en reglas, por claridad)
+//
+// 6. LECTURA POR LÍDER (collectionGroup):
+//    - Los líderes pueden usar collectionGroup('ventas') para ver todos
+//    - Las reglas permiten lectura a isLider() para todas las colecciones
+//
+// 7. TIMESTAMPS DEL SERVIDOR:
+//    - Algunas colecciones usan FieldValue.serverTimestamp() en Dart
+//    - Las reglas validan que exista el campo timestamp
+//
+// ==================== PASOS PARA APLICAR LAS REGLAS ====================
+//
+// A. EN FIREBASE CONSOLE (GUI):
+//    1. Ir a: Firebase Console → Proyecto → Firestore Database
+//    2. Pestaña "Rules" (Reglas)
+//    3. Borrar contenido actual
+//    4. Pegar las reglas completas de arriba
+//    5. Click "Publicar"
+//    6. Esperar a que se apliquen (unos segundos)
+//
+// B. PRUEBAS EN FIREBASE CONSOLE (Rules Playground):
+//    1. En la misma pestaña Rules, ir a "Simulated authentication" (arriba)
+//    2. Seleccionar "Custom" y agregar:
+//       {
+//         "email": "miembro@test.com",
+//         "uid": "user123"
+//       }
+//    3. Probar lectura/escritura en colecciones
+//    4. Cambiar a "Líder" agregando role y probar lectura global
+//
+// C. CON EMULADOR LOCAL (recomendado para desarrollo):
+//    firebase emulator:start
+//
+// ==================== TABLA RESUMEN DE PERMISOS ====================
+//
+// Colección                  | Miembro (Create/Read/Update/Delete) | Líder (Read)
+// ===========================|======================================|==============
+// usuarios/{uid}             | Own/Own/Own/Own                      | All
+// presupuestos_comunidad     | Own/Own/Own/Own                      | All
+// liderazgo_comunitario/*    | Own/Own/Own/Own                      | All (collectionGroup)
+// lugares_turisticos         | Own/Own/Own/Own                      | All
+// visitantes                 | Own/Own/Own/Own                      | All
+// emp_comun_turistico        | Own/Own/Own/Own                      | All
+// estra_fort_turismo_comun   | Own/Own/Own/Own                      | All
+// salud_comunitaria          | Own/Own/Own/Own                      | All
+// seguridad_alimentaria      | Own/Own/Own**/Own                    | All
+//
+// ** seguridad_alimentaria: Update solo si fecha < 7 días

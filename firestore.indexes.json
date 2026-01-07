@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "salud_comunitaria",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "correo", "order": "ASCENDING" },
+        { "fieldPath": "fechaRegistro", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "seguridad_alimentaria",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "correo", "order": "ASCENDING" },
+        { "fieldPath": "fechaRegistro", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "presupuestos_comunidad",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

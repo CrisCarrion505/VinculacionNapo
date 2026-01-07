@@ -18,7 +18,7 @@ class _LiderGestionTuristicaViewState extends State<LiderGestionTuristicaView> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('lugares_turisticos')
-            .orderBy('fecha', descending: true)
+            .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -41,14 +41,13 @@ class _LiderGestionTuristicaViewState extends State<LiderGestionTuristicaView> {
             padding: const EdgeInsets.all(16),
             itemCount: registros.length,
             itemBuilder: (context, index) {
-                final data = registros[index].data() as Map<String, dynamic>;
-                  final miembro = data['correo'] ?? data['nombreUsuario'] ?? 'Desconocido';
-                  final createdAt = data['createdAt'];
-                  final fecha = createdAt is Timestamp ? createdAt.toDate() : DateTime.now();
-                  final Map<String, dynamic> payload = Map<String, dynamic>.from(data['data'] ?? {});
-                  final lugar = payload['Nombre del establecimiento'] ?? payload['lugar'] ?? 'Sin especificar';
-                  final descripcion = payload['Ubicación/Dirección'] ?? payload['descripcion'] ?? '';
-                  final visitantes = int.tryParse(payload['Visitantes']?.toString() ?? '') ?? (payload['visitantes'] ?? 0);
+              final data = registros[index].data() as Map<String, dynamic>;
+              final miembro = data['correo'] ?? 'Desconocido';
+              final timestamp = data['timestamp'];
+              final fecha = timestamp is Timestamp ? timestamp.toDate() : DateTime.now();
+              final nombre = data['nombre'] ?? 'Sin especificar';
+              final ubicacion = data['ubicacion'] ?? '';
+              final visitantes = data['visitantes'] ?? 0;
 
               return Card(
                 elevation: 4,
@@ -70,7 +69,7 @@ class _LiderGestionTuristicaViewState extends State<LiderGestionTuristicaView> {
                                   style: TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
                                 Text(
-                                  lugar,
+                                  nombre,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -79,7 +78,7 @@ class _LiderGestionTuristicaViewState extends State<LiderGestionTuristicaView> {
                               ],
                             ),
                           ),
-                          Icon(Icons.location_on, color: Colors.orange),
+                          const Icon(Icons.location_on, color: Colors.orange),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -125,10 +124,10 @@ class _LiderGestionTuristicaViewState extends State<LiderGestionTuristicaView> {
                             ),
                             const SizedBox(height: 12),
                             const Text(
-                              'Descripción:',
+                              'Ubicación:',
                               style: TextStyle(fontSize: 12, color: Colors.grey),
                             ),
-                            Text(descripcion),
+                            Text(ubicacion),
                             const SizedBox(height: 12),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
