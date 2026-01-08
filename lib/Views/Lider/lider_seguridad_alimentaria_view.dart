@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto_vinculacion/Modelos/seguridad_alimentaria_model.dart';
 import 'package:proyecto_vinculacion/Servicios/seguridad_alimentaria_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// imports ajustados: FirebaseAuth y Cloud Firestore no se usan aquí
 
 /// Vista de Seguridad Alimentaria para usuarios con rol "Líder".
 ///
@@ -30,22 +29,7 @@ class _LiderSeguridadAlimentariaViewState
   List<SeguridadAlimentariaModel> _reportesListado = [];
   bool _listando = false;
 
-  // Ubicaciones / Calles de Pano (Tena) - listado representativo (puede usarse en filtros)
-  final List<String> _ubicacionesPano = [
-    'Centro',
-    'Avenida Orellana',
-    'Avenida Amazonas',
-    'Calle Sucre',
-    'Calle Bolívar',
-    'Calle Guayas',
-    'Calle Mejía',
-    'Calle Juan Montalvo',
-    'Calle 10 de Agosto',
-    'Barrio La Merced',
-    'Sector El Arenal',
-    'Puerto Bolívar',
-    'Otra',
-  ];
+  // Lista de ubicaciones eliminada (no usada en la vista)
 
   @override
   void initState() {
@@ -290,7 +274,7 @@ class _LiderSeguridadAlimentariaViewState
                     padding: const EdgeInsets.all(12),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text('$alimento', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text(alimento, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         Text('Registros: $total', style: const TextStyle(color: Colors.grey)),
                       ]),
                       const SizedBox(height: 8),
@@ -300,7 +284,7 @@ class _LiderSeguridadAlimentariaViewState
                         columns: const [DataColumn(label: Text('Proveedor')), DataColumn(label: Text('Teléfono')), DataColumn(label: Text('Registros'))],
                         rows: proveedoresOrdenados.map((e) {
                           final key = e.key;
-                          final match = RegExp(r'^(.*) \((.*)\) ').firstMatch(key + '\u0000');
+                          final match = RegExp(r'^(.*) \((.*)\) ').firstMatch('$key\u0000');
                           String nombre = key;
                           String telefono = '';
                           if (match != null) {
@@ -317,7 +301,7 @@ class _LiderSeguridadAlimentariaViewState
                     ]),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         );

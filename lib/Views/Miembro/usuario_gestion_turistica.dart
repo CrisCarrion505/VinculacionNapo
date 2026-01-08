@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:proyecto_vinculacion/Modelos/turismo_model.dart'; 
 import 'package:proyecto_vinculacion/Servicios/turismo_service.dart';
 import 'package:proyecto_vinculacion/validar_cedula_ecuador.dart';
+import 'package:proyecto_vinculacion/datos_pano_tena.dart';
 
 /// Ejemplo de widget con TabBar/TabBarView para cada categoría
 class TurismoComunitario extends StatefulWidget {
@@ -15,6 +16,67 @@ class TurismoComunitario extends StatefulWidget {
 }
 
 class _TurismoComunitarioState extends State<TurismoComunitario> {
+  // Variables para Registro de Visitante
+  String? _tipoServicioSeleccionado;
+  String? _ubicacionSeleccionada;
+
+  // Lista de tipos de servicio
+  final List<String> _tiposServicio = [
+    'Albergues',
+    'Hospedajes rurales',
+    'Rutas de turismo vivencial',
+    'Experiencias astronómicas autóctonas',
+    'Artesanía local',
+    'Productos locales',
+    'Patrimonio natural',
+    'Balnearios',
+  ];
+
+  // Mapeo de tipo de servicio a ubicaciones
+  final Map<String, List<String>> _servicioUbicaciones = {
+    'Balnearios': [
+      'Balneario Juan Bueno',
+      'Balneario Lagartococha',
+      'Balneario Pano',
+      'Balneario Pikitzacocha',
+      'Balneario Puka Urku',
+      'Balneario Pumarumi',
+      'Balneario Rumicocha',
+      'Balneario San Andrés',
+      'Balneario San Bartolomé de Imbu',
+      'Balneario San Carlos',
+      'Balneario Yaracocha',
+    ],
+    'Albergues': [
+      'Hostería Napusamai Pasourcu Lodge',
+    ],
+    'Hospedajes rurales': [
+      'Hospedaje Alto Pano',
+      'Hospedaje Pano Centro',
+    ],
+    'Rutas de turismo vivencial': [
+      'Ruta Bosque de los Sueños',
+      'Ruta Cascada Achiyacu',
+    ],
+    'Experiencias astronómicas autóctonas': [
+      'Mirador Rayuurcu',
+      'Mirador Sacha Urco',
+    ],
+    'Artesanía local': [
+      'Centro Artesanal Alto Pano',
+      'Centro Artesanal Pano',
+    ],
+    'Productos locales': [
+      'Mercado Pano',
+      'Tienda Local Pano',
+    ],
+    'Patrimonio natural': [
+      'Petroglifo Pumarumi',
+      'Rumi Cocha',
+      'Cañón Supaypaccha Uctu',
+    ],
+  };
+
   // Definición de categorías y sus campos (cada uno con un icono)
   final Map<String, List<Map<String, dynamic>>> categorias = {
     "Lugar Turístico": [
@@ -42,16 +104,6 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
       {"nombre": "Productos locales con valor cultural", "icono": Icons.shopping_bag},
       {"nombre": "Patrimonio natural", "icono": Icons.nature},
     ],
-    "Estrategias para el fortalecimiento del turismo comunitario": [
-      // Estos campos representarán las "acciones" o estrategias.
-      {"nombre": "Programas de formación en gestión de emprendimientos turísticos", "icono": Icons.school},
-      {"nombre": "Microcréditos para proyectos comunitarios", "icono": Icons.monetization_on},
-      {"nombre": "Financiamiento para proyectos comunitarios", "icono": Icons.account_balance},
-      {"nombre": "Estrategias de marketing digital", "icono": Icons.public},
-      {"nombre": "Estrategias de turismo experiencial", "icono": Icons.explore},
-      {"nombre": "Alianzas con el sector público", "icono": Icons.business},
-      {"nombre": "Alianzas con el sector privado", "icono": Icons.handshake},
-    ],
   };
 
   /// Mapa para administrar un TextEditingController para cada campo.
@@ -69,8 +121,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
         controllers[categoria]![fieldName] = TextEditingController();
       }
       // Para las categorías que requieren un campo adicional de "Nombre", se agrega aquí.
-      if (categoria == "Emprendimiento Comunitario Turístico" ||
-          categoria == "Estrategias para el fortalecimiento del turismo comunitario") {
+      if (categoria == "Emprendimiento Comunitario Turístico") {
         controllers[categoria]!["Nombre"] = TextEditingController();
       }
     });
@@ -141,6 +192,21 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
 
   // Guardar datos para "Registro de visitante"
   Future<void> guardarDatosRegistroVisitante() async {
+    // Validar que tipoServicio y ubicación estén seleccionados
+    if (_tipoServicioSeleccionado == null || _tipoServicioSeleccionado!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona un tipo de servicio turístico'))
+      );
+      return;
+    }
+
+    if (_ubicacionSeleccionada == null || _ubicacionSeleccionada!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona una ubicación/lugar turístico'))
+      );
+      return;
+    }
+
     Map<String, String> data = {};
     for (var item in categorias["Registro de visitante"]!) {
       String fieldName = item["nombre"];
@@ -176,11 +242,21 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
     }
 
     try {
-      await FirebaseTurismoService().addRegistroVisitante(data, correo);
+      await FirebaseTurismoService().addRegistroVisitante(
+        data,
+        correo,
+        _tipoServicioSeleccionado!,
+        _ubicacionSeleccionada!,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Datos guardados para Registro de visitante"))
       );
       limpiarCampos();
+      // Limpiar también las selecciones de tipo de servicio y ubicación
+      setState(() {
+        _tipoServicioSeleccionado = null;
+        _ubicacionSeleccionada = null;
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error al guardar: $e"))
@@ -219,37 +295,147 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
     }
   }
 
-  // Guardar datos para "Estrategias para el fortalecimiento del turismo comunitario"
-  Future<void> guardarDatosEstrategia() async {
-    const cat = "Estrategias para el fortalecimiento del turismo comunitario";
-    final catControllers = controllers[cat]!;
-    String nombre = catControllers["Nombre"]?.text ?? "";
-    List<String> acciones = [];
-    for (var item in categorias[cat]!) {
-      String fieldName = item["nombre"];
-      String value = catControllers[fieldName]?.text ?? "";
-      acciones.add("$fieldName: $value");
-    }
-    final correo = FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
-    final estrategia = EstrategiaTurismoComunitarioModel(
-      correo: correo,
-      nombre: nombre,
-      acciones: acciones,
-    );
-    try {
-      await FirebaseTurismoService().addEstrategia(estrategia, correo);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Datos guardados para Estrategia"))
-      );
-      limpiarCampos();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al guardar: $e"))
-      );
-    }
-  }
+  // Guardar datos para "Estrategias para el fortalecimiento del turismo comunitario" - REMOVIDO
+  // Este método fue eliminado y ya no se utiliza
 
   /// Método para construir el formulario de los dos primeros tabs (Lugar Turístico y Registro de visitante)
+  /// Construir el formulario especializado para "Registro de visitante" con selección de servicio y ubicación
+  Widget _buildRegistroVisitanteTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          // Selección de Tipo de Servicio Turístico
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.room_service, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        "Tipo de Servicio Turístico",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _tipoServicioSeleccionado,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: "Selecciona un tipo de servicio",
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                  items: _tiposServicio.map((servicio) {
+                    return DropdownMenuItem<String>(
+                      value: servicio,
+                      child: Text(servicio),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _tipoServicioSeleccionado = value;
+                      // Resetear la ubicación cuando cambia el servicio
+                      _ubicacionSeleccionada = null;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Por favor selecciona un tipo de servicio";
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Selección de Ubicación (solo si hay servicio seleccionado)
+          if (_tipoServicioSeleccionado != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.location_on, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          "Lugar/Ubicación Turística",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _ubicacionSeleccionada,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      hintText: "Selecciona una ubicación",
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                    ),
+                    items: (_servicioUbicaciones[_tipoServicioSeleccionado] ?? [])
+                        .map((ubicacion) {
+                      return DropdownMenuItem<String>(
+                        value: ubicacion,
+                        child: Text(ubicacion),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _ubicacionSeleccionada = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Por favor selecciona una ubicación";
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 20),
+          
+          // Campos del formulario de visitante
+          _buildList("Registro de visitante", categorias["Registro de visitante"]!),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: guardarDatosRegistroVisitante,
+            child: const Text("Guardar"),
+          )
+        ],
+      ),
+    );
+  }
+
+  /// Construir el formulario estándar para las categorías principales
   Widget _buildTabContent(String categoria, VoidCallback onGuardar) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -282,29 +468,6 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
           _buildList(cat, categorias[cat]!),
           const SizedBox(height: 20),
           ElevatedButton(onPressed: guardarDatosEmprendimiento, child: const Text("Guardar"))
-        ],
-      ),
-    );
-  }
-
-  /// Construir el formulario para "Estrategias para el fortalecimiento del turismo comunitario"
-  Widget _buildEstrategiaTab() {
-    const cat = "Estrategias para el fortalecimiento del turismo comunitario";
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          TextField(
-            controller: controllers[cat]!["Nombre"],
-            decoration: const InputDecoration(
-              labelText: "Nombre de la Estrategia",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildList(cat, categorias[cat]!),
-          const SizedBox(height: 20),
-          ElevatedButton(onPressed: guardarDatosEstrategia, child: const Text("Guardar"))
         ],
       ),
     );
@@ -430,6 +593,9 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                     ),
                   ],
                 )
+              else if (fieldName == 'Ubicación/Dirección')
+                // Autocompletado para ubicaciones de Pano
+                _buildUbicacionAutocompletado(categoria, fieldName)
               else
                 TextField(
                   controller: controllers[categoria]![fieldName],
@@ -498,7 +664,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Gestión Turística"),
@@ -508,7 +674,6 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
               Tab(text: "Lugar Turístico"),
               Tab(text: "Registro visitante"),
               Tab(text: "Emprendimiento"),
-              Tab(text: "Estrategias"),
               Tab(text: "Historial"),
             ],
           ),
@@ -516,9 +681,8 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
         body: TabBarView(
           children: [
             _buildTabContent("Lugar Turístico", guardarDatosLugarTuristico),
-            _buildTabContent("Registro de visitante", guardarDatosRegistroVisitante),
+            _buildRegistroVisitanteTab(),
             _buildEmprendimientoTab(),
-            _buildEstrategiaTab(),
             _buildHistorialTurismo(),
           ],
         ),
@@ -593,7 +757,7 @@ void limpiarCampos() {
       controllers[categoria]![fieldName]?.clear();
     }
     // Limpiar el campo "Nombre" para las categorías específicas si existe
-    if (categoria == "Emprendimiento Comunitario Turístico" || categoria == "Estrategias para el fortalecimiento del turismo comunitario") {
+    if (categoria == "Emprendimiento Comunitario Turístico") {
       controllers[categoria]!["Nombre"]?.clear();
     }
   });
@@ -604,4 +768,47 @@ void limpiarCampos() {
   );
 }
 
+  /// Widget para autocompletado de ubicaciones en Pano
+  Widget _buildUbicacionAutocompletado(String categoria, String fieldName) {
+    final controller = controllers[categoria]![fieldName]!;
+    
+    return Autocomplete<String>(
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty) {
+          return const Iterable<String>.empty();
+        }
+        return ubicacionesPanoTena.where((String option) {
+          return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+        });
+      },
+      onSelected: (String selection) {
+        controller.text = selection;
+      },
+      fieldViewBuilder: (BuildContext context, TextEditingController fieldController, 
+          FocusNode focusNode, VoidCallback onFieldSubmitted) {
+        // Sincronizar el controller del Autocomplete con el nuestro
+        fieldController.text = controller.text;
+        controller.addListener(() {
+          fieldController.text = controller.text;
+        });
+        
+        return TextField(
+          controller: fieldController,
+          focusNode: focusNode,
+          onChanged: (value) {
+            controller.text = value;
+          },
+          decoration: InputDecoration(
+            hintText: "Busca un lugar en Pano...",
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            prefixIcon: const Icon(Icons.location_on),
+          ),
+        );
+      },
+    );
+  }
 }

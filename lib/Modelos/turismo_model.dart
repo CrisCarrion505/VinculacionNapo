@@ -1,7 +1,9 @@
 // turismo_model.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Modelo para Lugar Turístico
 class LugarTuristicoModel {
+  final String id;
   final String correo;
   final String numeroRegistroTuristico;
   final String tipoServicio;
@@ -10,8 +12,10 @@ class LugarTuristicoModel {
   final String tarifasPorServicio;
   final String horariosOperacion;
   final String ubicacion;
+  final DateTime fechaRegistro;
 
   LugarTuristicoModel({
+    this.id = '',
     required this.correo,
     required this.numeroRegistroTuristico,
     required this.tipoServicio,
@@ -20,6 +24,7 @@ class LugarTuristicoModel {
     required this.tarifasPorServicio,
     required this.horariosOperacion,
     required this.ubicacion,
+    required this.fechaRegistro,
   });
 
   Map<String, dynamic> toMap() {
@@ -32,11 +37,13 @@ class LugarTuristicoModel {
       'tarifasPorServicio': tarifasPorServicio,
       'horariosOperacion': horariosOperacion,
       'ubicacion': ubicacion,
+      'fechaRegistro': Timestamp.fromDate(fechaRegistro),
     };
   }
 
-  factory LugarTuristicoModel.fromMap(Map<String, dynamic> map) {
+  factory LugarTuristicoModel.fromMap(Map<String, dynamic> map, String id) {
     return LugarTuristicoModel(
+      id: id,
       correo: map['correo'] ?? '',
       numeroRegistroTuristico: map['numeroRegistroTuristico'] ?? '',
       tipoServicio: map['tipoServicio'] ?? '',
@@ -45,43 +52,59 @@ class LugarTuristicoModel {
       tarifasPorServicio: map['tarifasPorServicio'] ?? '',
       horariosOperacion: map['horariosOperacion'] ?? '',
       ubicacion: map['ubicacion'] ?? '',
+      fechaRegistro: (map['fechaRegistro'] is Timestamp)
+          ? (map['fechaRegistro'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }
 
 /// Modelo para Registro de Visitante
 class RegistroVisitanteModel {
+  final String id;
   final String correo;
-  final String cedula;
+  final String tipoServicio;
+  final String ubicacion;
   final String nombre;
   final String telefono;
   final String opinionesValoraciones;
+  final DateTime fechaVisita;
 
   RegistroVisitanteModel({
+    this.id = '',
     required this.correo,
-    required this.cedula,
+    required this.tipoServicio,
+    required this.ubicacion,
     required this.nombre,
     required this.telefono,
     required this.opinionesValoraciones,
+    required this.fechaVisita,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'correo': correo,
-      'cedula': cedula,
+      'tipoServicio': tipoServicio,
+      'ubicacion': ubicacion,
       'nombre': nombre,
       'telefono': telefono,
       'opinionesValoraciones': opinionesValoraciones,
+      'fechaVisita': Timestamp.fromDate(fechaVisita),
     };
   }
 
-  factory RegistroVisitanteModel.fromMap(Map<String, dynamic> map) {
+  factory RegistroVisitanteModel.fromMap(Map<String, dynamic> map, String id) {
     return RegistroVisitanteModel(
+      id: id,
       correo: map['correo'] ?? '',
-      cedula: map['cedula'] ?? '',
+      tipoServicio: map['tipoServicio'] ?? '',
+      ubicacion: map['ubicacion'] ?? '',
       nombre: map['nombre'] ?? '',
       telefono: map['telefono'] ?? '',
       opinionesValoraciones: map['opinionesValoraciones'] ?? '',
+      fechaVisita: (map['fechaVisita'] is Timestamp)
+          ? (map['fechaVisita'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }

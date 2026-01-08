@@ -7,13 +7,18 @@ import 'package:proyecto_vinculacion/Modelos/turismo_model.dart'; // Ajusta la r
 class FirebaseTurismoService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Guarda los datos de Lugar Turístico en un nuevo documento de la colección "Turismo".
+  /// Guarda los datos de Lugar Turístico en un nuevo documento de la colección "lugares_turisticos".
   Future<void> addLugarTuristico(Map<String, String> data, String correo) async {
     try {
       await _firestore.collection('lugares_turisticos').add({
-        'categoria': 'Lugar Turístico',
         'correo': correo,
-        'data': data,
+        'numeroRegistroTuristico': data['Número de registro turístico'] ?? '',
+        'tipoServicio': data['Tipo de servicio turístico'] ?? '',
+        'nombreEstablecimiento': data['Nombre del establecimiento'] ?? '',
+        'capacidadAtencion': data['Capacidad de atención'] ?? '',
+        'tarifasPorServicio': data['Tarifas por servicio'] ?? '',
+        'horariosOperacion': data['Horarios de operación'] ?? '',
+        'ubicacion': data['Ubicación/Dirección'] ?? '',
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -91,13 +96,16 @@ class FirebaseTurismoService {
     }
   }
 
-  /// Guarda los datos de Registro de visitante en un nuevo documento de la colección "Turismo".
-  Future<void> addRegistroVisitante(Map<String, String> data, String correo) async {
+  /// Guarda los datos de Registro de visitante en un nuevo documento de la colección "visitantes".
+  Future<void> addRegistroVisitante(Map<String, String> data, String correo, String tipoServicio, String ubicacion) async {
     try {
       await _firestore.collection('visitantes').add({
-        'categoria': 'Registro de visitante',
         'correo': correo,
-        'data': data,
+        'tipoServicio': tipoServicio,
+        'ubicacion': ubicacion,
+        'nombre': data['Nombre'] ?? '',
+        'telefono': data['Teléfono'] ?? '',
+        'opinionesValoraciones': data['Opiniones y valoraciones de visitantes'] ?? '',
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
