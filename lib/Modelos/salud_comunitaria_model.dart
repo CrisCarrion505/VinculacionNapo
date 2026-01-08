@@ -62,83 +62,23 @@ class SaludComunitariaModel {
   }
 }
 
-// Mapa de enfermedades con síntomas específicos
-final enfermedadesMap = {
-  'Gripe': [
-    'Fiebre',
-    'Tos',
-    'Dolor de garganta',
-    'Congestión nasal',
-    'Dolores corporales'
-  ],
-  'Diabetes': [
-    'Sed excesiva',
-    'Frecuencia urinaria',
-    'Fatiga',
-    'Visión borrosa',
-    'Heridas que cicatrizan lentamente'
-  ],
-  'Hipertensión': [
-    'Dolor de cabeza',
-    'Mareos',
-    'Dolor en el pecho',
-    'Visión borrosa',
-    'Dificultad para respirar'
-  ],
-  'Desnutrición': [
-    'Debilidad',
-    'Pérdida de peso',
-    'Fatiga',
-    'Problemas de concentración',
-    'Piel seca'
-  ],
-  'Gastroenteritis': [
-    'Diarrea',
-    'Vómito',
-    'Dolor abdominal',
-    'Fiebre',
-    'Pérdida de apetito'
-  ],
-  'Anemia': [
-    'Fatiga',
-    'Debilidad',
-    'Palidez',
-    'Falta de aire',
-    'Mareos'
-  ],
-  'Infección Respiratoria': [
-    'Tos',
-    'Fiebre',
-    'Dolor de pecho',
-    'Dificultad para respirar',
-    'Flemas'
-  ],
-  'Dengue': [
-    'Fiebre alta',
-    'Dolor de cabeza',
-    'Dolor muscular',
-    'Erupción cutánea',
-    'Náuseas'
-  ],
-  'Parasitosis': [
-    'Dolor abdominal',
-    'Diarrea',
-    'Prurito anal',
-    'Pérdida de apetito',
-    'Irritabilidad'
-  ],
-  'Otra': [],
-};
-
-// Rangos de edad
+/// Rangos de edad: exactamente 5 opciones obligatorias
 final rangosEdad = [
-  'Menor de 5 años',
-  '5 - 12 años',
-  '13 - 18 años',
-  '19 - 35 años',
-  '36 - 60 años',
-  'Mayor de 60 años',
+  'Bebés',
+  'Niños',
+  'Adolescentes',
+  'Adultos',
+  'Adultos mayores',
 ];
 
-// Géneros
+/// Mapa de límites para cada rango de edad
+final rangoEdadLimites = {
+  'Bebés': {'min': 0, 'max': 4},
+  'Niños': {'min': 5, 'max': 12},
+  'Adolescentes': {'min': 13, 'max': 17},
+  'Adultos': {'min': 18, 'max': 59},
+  'Adultos mayores': {'min': 60, 'max': 120},
+};
+
+/// Géneros (opcional)
 final generos = ['Masculino', 'Femenino', 'Otro', 'Prefiero no especificar'];

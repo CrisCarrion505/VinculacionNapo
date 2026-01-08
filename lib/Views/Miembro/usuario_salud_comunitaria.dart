@@ -29,6 +29,32 @@ class _UsuarioSaludComunitariaViewState
 
   final _formKey = GlobalKey<FormState>();
 
+  // Lista de enfermedades disponibles
+  final List<String> _enfermedades = [
+    'Gripe',
+    'Diarrea',
+    'Tos',
+    'Fiebre',
+    'Dolor de Cabeza',
+    'Infección Respiratoria',
+    'Gastroenteritis',
+    'Alergia',
+    'Otra enfermedad',
+  ];
+
+  // Síntomas genéricos
+  final Map<String, List<String>> _sintomasGeneral = {
+    'Gripe': ['Fiebre', 'Tos', 'Dolor de garganta', 'Escalofríos', 'Fatiga'],
+    'Diarrea': ['Dolor abdominal', 'Heces sueltas', 'Nauseas', 'Vómitos'],
+    'Tos': ['Tos seca', 'Tos con flemas', 'Dolor al toser', 'Garganta irritada'],
+    'Fiebre': ['Temperatura alta', 'Escalofríos', 'Sudoración', 'Debilidad'],
+    'Dolor de Cabeza': ['Dolor frontal', 'Migraña', 'Presión en la cabeza'],
+    'Infección Respiratoria': ['Congestión', 'Estornudos', 'Secreción nasal', 'Tos'],
+    'Gastroenteritis': ['Dolor abdominal', 'Vómitos', 'Diarrea', 'Pérdida de apetito'],
+    'Alergia': ['Picazón', 'Rash', 'Hinchazón', 'Estornudos'],
+    'Otra enfermedad': ['Síntoma 1', 'Síntoma 2', 'Síntoma 3'],
+  };
+
   @override
   void initState() {
     super.initState();
@@ -58,33 +84,17 @@ class _UsuarioSaludComunitariaViewState
       return 'Edad inválida (0-120)';
     }
 
-    // Validar coherencia con rango
-    final edadInt = int.parse(value);
-    bool esCoherente = false;
-
-    switch (_rangoEdadSeleccionado) {
-      case 'Menor de 5 años':
-        esCoherente = edadInt < 5;
-        break;
-      case '5 - 12 años':
-        esCoherente = edadInt >= 5 && edadInt <= 12;
-        break;
-      case '13 - 18 años':
-        esCoherente = edadInt >= 13 && edadInt <= 18;
-        break;
-      case '19 - 35 años':
-        esCoherente = edadInt >= 19 && edadInt <= 35;
-        break;
-      case '36 - 60 años':
-        esCoherente = edadInt >= 36 && edadInt <= 60;
-        break;
-      case 'Mayor de 60 años':
-        esCoherente = edadInt > 60;
-        break;
-    }
-
-    if (!esCoherente) {
-      return 'La edad no coincide con el rango seleccionado';
+    // Validar coherencia con rango seleccionado usando rangoEdadLimites
+    if (_rangoEdadSeleccionado != null) {
+      final limites = rangoEdadLimites[_rangoEdadSeleccionado];
+      if (limites != null) {
+        final min = limites['min'] as int;
+        final max = limites['max'] as int;
+        
+        if (edad < min || edad > max) {
+          return 'La edad debe estar entre $min y $max para el rango seleccionado';
+        }
+      }
     }
 
     return null;
@@ -281,7 +291,7 @@ class _UsuarioSaludComunitariaViewState
                         isExpanded: true,
                         underline: const SizedBox(),
                         hint: const Text('Selecciona una enfermedad'),
-                        items: enfermedadesMap.keys.map((String enfermedad) {
+                        items: _enfermedades.map((String enfermedad) {
                           return DropdownMenuItem<String>(
                             value: enfermedad,
                             child: Text(enfermedad),
@@ -432,11 +442,11 @@ class _UsuarioSaludComunitariaViewState
                 validator: _validateSintomas,
                 builder: (state) {
                   final sintomas =
-                      enfermedadesMap[_enfermedadSeleccionada] ?? [];
+                      _sintomasGeneral[_enfermedadSeleccionada] ?? [];
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Síntomas * $_enfermedadSeleccionada)',
+                      Text('Síntomas de $_enfermedadSeleccionada *',
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 12),
                       Container(
