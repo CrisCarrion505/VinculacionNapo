@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto_vinculacion/Views/Login.dart';
 import 'Lider/lider_eco_familiar_view.dart';
 import 'Lider/lider_liderazgo_view.dart';
 import 'Lider/lider_gestion_turistica_view.dart';
@@ -14,6 +16,20 @@ class DashboardLider extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Dashboard - Líder'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(

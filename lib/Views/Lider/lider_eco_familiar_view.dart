@@ -11,6 +11,8 @@ class LiderEcoFamiliarView extends StatefulWidget {
 class _LiderEcoFamiliarViewState extends State<LiderEcoFamiliarView> {
   @override
   Widget build(BuildContext context) {
+
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text("Economía Familiar - Vista Líder"),
@@ -48,7 +50,21 @@ class _LiderEcoFamiliarViewState extends State<LiderEcoFamiliarView> {
               final fecha = data['fecha'] is Timestamp
                   ? (data['fecha'] as Timestamp).toDate()
                   : DateTime.now();
-              final miembro = data['userId'] ?? 'Desconocido';
+              final userId = data['userId'] as String?;
+              final nombreUsuario = data['nombreUsuario'] as String?;
+
+              // Si no hay nombreUsuario, obtenerlo de la colección usuarios
+              if (nombreUsuario == null || nombreUsuario.isEmpty) {
+                return _buildMiembroCard(
+                  ingresos: ingresos,
+                  egresos: egresos,
+                  balance: balance,
+                  fecha: fecha,
+                  userId: userId ?? 'Desconocido',
+                );
+              }
+
+              final miembro = nombreUsuario;
 
               return Card(
                 elevation: 4,
@@ -152,6 +168,101 @@ class _LiderEcoFamiliarViewState extends State<LiderEcoFamiliarView> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMiembroCard({
+    required double ingresos,
+    required double egresos,
+    required double balance,
+    required DateTime fecha,
+    required String userId,
+  }) {
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('usuarios').doc(userId).get(),
+      builder: (context, snapshot) {
+        String miembro = 'Desconocido';
+        
+        if (snapshot.hasData && snapshot.data!.exists) {
+          miembro = snapshot.data!['correo'] ?? 'Desconocido';
+        }
+
+        return Card(
+          elevation: 4,
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Miembro:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Text(
+                            miembro,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Fecha:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        Text(
+                          '${fecha.day}/${fecha.month}/${fecha.year}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatistic(
+                      'Ingresos',
+                      '\$$ingresos',
+                      Colors.green,
+                    ),
+                    _buildStatistic(
+                      'Egresos',
+                      '\$$egresos',
+                      Colors.red,
+                    ),
+                    _buildStatistic(
+                      'Balance',
+                      '\$$balance',
+                      balance >= 0 ? Colors.blue : Colors.orange,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -436,7 +436,7 @@ class _UsuarioSaludComunitariaViewState
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Síntomas * ${_enfermedadSeleccionada})',
+                      Text('Síntomas * $_enfermedadSeleccionada)',
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 12),
                       Container(

@@ -46,7 +46,7 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);  // Cambia de 4 a 2
+    _tabController = TabController(length: 3, vsync: this);
     
     // Agregar listeners para validación en tiempo real
     _cedulaController.addListener(_validarCedula);
@@ -236,8 +236,16 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
       return;
     }
 
-    final correo = FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
-    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Usuario no autenticado. Inicie sesión."))
+      );
+      return;
+    }
+
+    final correo = user.email!.toLowerCase();
+
     final registro = RegistroVentasModel(
       correo: correo,
       cedula: _cedulaController.text,
@@ -268,8 +276,16 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
       return;
     }
 
-    final correo = FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
-    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Usuario no autenticado. Inicie sesión."))
+      );
+      return;
+    }
+
+    final correo = user.email!.toLowerCase();
+
     final gastosOperativos = GastosOperativosModel(
       correo: correo,
       gastos: _gastos,
@@ -314,6 +330,7 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
           tabs: const [
             Tab(icon: Icon(Icons.point_of_sale), text: "Ventas"),
             Tab(icon: Icon(Icons.payment), text: "Gastos"),
+            Tab(icon: Icon(Icons.history), text: "Historial"),
           ],
         ),
       ),
@@ -322,6 +339,88 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
         children: [
           _buildRegistroVentas(),
           _buildGastosOperativos(),
+          _buildHistorialLiderazgo(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistorialLiderazgo() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Center(child: Text('Usuario no autenticado'));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Registros de Ventas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          FutureBuilder<List<RegistroVentasModel>>(
+            future: LiderazgoService().getRegistrosVentas(user.email ?? ''),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                );
+              }
+              final list = snapshot.data ?? [];
+              if (list.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('No hay registros de ventas'),
+                );
+              }
+              return Column(
+                children: list.map((r) => Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    title: Text('Cédula: ${r.cedula}'),
+                    subtitle: Text('Ventas: ${r.ventas.length}'),
+                    trailing: const Icon(Icons.receipt),
+                  ),
+                )).toList(),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('Gastos Operativos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          FutureBuilder<List<GastosOperativosModel>>(
+            future: LiderazgoService().getGastosOperativos(user.email ?? ''),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                );
+              }
+              final list = snapshot.data ?? [];
+              if (list.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('No hay gastos operativos'),
+                );
+              }
+              return Column(
+                children: list.map((g) => Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    title: const Text('Gastos Operativos'),
+                    subtitle: Text('Items: ${g.gastos.length}'),
+                    trailing: const Icon(Icons.payment),
+                  ),
+                )).toList(),
+              );
+            },
+          ),
         ],
       ),
     );

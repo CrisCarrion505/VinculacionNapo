@@ -306,7 +306,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Gestión Turística"),
@@ -317,6 +317,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
               Tab(text: "Registro visitante"),
               Tab(text: "Emprendimiento"),
               Tab(text: "Estrategias"),
+              Tab(text: "Historial"),
             ],
           ),
         ),
@@ -326,8 +327,68 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
             _buildTabContent("Registro de visitante", guardarDatosRegistroVisitante),
             _buildEmprendimientoTab(),
             _buildEstrategiaTab(),
+            _buildHistorialTurismo(),
           ],
         ),
+      ),
+    );
+  }
+  Widget _buildHistorialTurismo() {
+    final correo = FirebaseAuth.instance.currentUser?.email ?? '';
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Lugares Turísticos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: FirebaseTurismoService().getLugaresTuristicos(correo),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+              if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+              final list = snapshot.data ?? [];
+              if (list.isEmpty) return const Text('No hay registros');
+              return Column(children: list.map((d) => Card(margin: const EdgeInsets.only(bottom: 12), child: ListTile(title: Text(d['nombre'] ?? 'Lugar')))).toList());
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('Registros de Visitantes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: FirebaseTurismoService().getVisitantes(correo),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+              if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+              final list = snapshot.data ?? [];
+              if (list.isEmpty) return const Text('No hay registros');
+              return Column(children: list.map((d) => Card(margin: const EdgeInsets.only(bottom: 12), child: ListTile(title: Text(d['data']?['Nombre'] ?? 'Visitante')))).toList());
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('Emprendimientos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: FirebaseTurismoService().getEmprendimientos(correo),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+              if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+              final list = snapshot.data ?? [];
+              if (list.isEmpty) return const Text('No hay registros');
+              return Column(children: list.map((d) => Card(margin: const EdgeInsets.only(bottom: 12), child: ListTile(title: Text(d['nombre'] ?? 'Emprendimiento')))).toList());
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('Estrategias', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: FirebaseTurismoService().getEstrategias(correo),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+              if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+              final list = snapshot.data ?? [];
+              if (list.isEmpty) return const Text('No hay registros');
+              return Column(children: list.map((d) => Card(margin: const EdgeInsets.only(bottom: 12), child: ListTile(title: Text(d['nombre'] ?? 'Estrategia')))).toList());
+            },
+          ),
+        ],
       ),
     );
   }

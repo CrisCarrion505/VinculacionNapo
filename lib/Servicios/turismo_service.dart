@@ -21,6 +21,76 @@ class FirebaseTurismoService {
     }
   }
 
+  /// Obtener documentos guardados por correo para cada colección
+  Future<List<Map<String, dynamic>>> getLugaresTuristicos(String correo) async {
+    try {
+      try {
+        final snapshot = await _firestore.collection('lugares_turisticos')
+            .where('correo', isEqualTo: correo)
+            .orderBy('timestamp', descending: true)
+            .get();
+        return snapshot.docs.map((d) => d.data()).toList().cast<Map<String, dynamic>>();
+      } catch (e) {
+        // Si la consulta requiere un índice, hacemos una consulta sin orderBy como fallback
+        final message = e.toString();
+        if (message.contains('failed-precondition') || message.contains('requires an index')) {
+          final snapshot = await _firestore.collection('lugares_turisticos')
+              .where('correo', isEqualTo: correo)
+              .get();
+          return snapshot.docs.map((d) => d.data()).toList().cast<Map<String, dynamic>>();
+        }
+        rethrow;
+      }
+    } catch (e) {
+      throw Exception('Error al obtener lugares turísticos: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getVisitantes(String correo) async {
+    try {
+      try {
+        final snapshot = await _firestore.collection('visitantes')
+            .where('correo', isEqualTo: correo)
+            .orderBy('timestamp', descending: true)
+            .get();
+        return snapshot.docs.map((d) => d.data()).toList().cast<Map<String, dynamic>>();
+      } catch (e) {
+        final message = e.toString();
+        if (message.contains('failed-precondition') || message.contains('requires an index')) {
+          final snapshot = await _firestore.collection('visitantes')
+              .where('correo', isEqualTo: correo)
+              .get();
+          return snapshot.docs.map((d) => d.data()).toList().cast<Map<String, dynamic>>();
+        }
+        rethrow;
+      }
+    } catch (e) {
+      throw Exception('Error al obtener visitantes: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getEmprendimientos(String correo) async {
+    try {
+      final snapshot = await _firestore.collection('emp_comun_turistico')
+          .where('correo', isEqualTo: correo)
+          .get();
+      return snapshot.docs.map((d) => d.data()).toList().cast<Map<String, dynamic>>();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getEstrategias(String correo) async {
+    try {
+      final snapshot = await _firestore.collection('estra_fort_turismo_comun')
+          .where('correo', isEqualTo: correo)
+          .get();
+      return snapshot.docs.map((d) => d.data()).toList().cast<Map<String, dynamic>>();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Guarda los datos de Registro de visitante en un nuevo documento de la colección "Turismo".
   Future<void> addRegistroVisitante(Map<String, String> data, String correo) async {
     try {

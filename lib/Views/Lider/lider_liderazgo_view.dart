@@ -47,7 +47,6 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
               .collection('liderazgo_comunitario')
               .doc(correo)
               .collection('ventas')
-              .orderBy('timestamp', descending: true)
               .get();
 
           print('  Ventas encontradas: ${ventasSnapshot.docs.length}');
@@ -57,14 +56,19 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
             final timestamp = (data['timestamp'] is Timestamp) 
                 ? data['timestamp'] as Timestamp 
                 : Timestamp.now();
-            allVentas.add({
-              'miembro': correo,
-              'producto': data['producto'] ?? 'Sin especificar',
-              'cantidad': data['cantidad'] ?? 0,
-              'precio': data['precio'] ?? 0,
-              'total': data['total'] ?? 0,
-              'timestamp': timestamp,
-            });
+            
+            // Las ventas están en una lista dentro del documento
+            final ventasList = List<Map<String, dynamic>>.from(data['ventas'] ?? []);
+            for (var venta in ventasList) {
+              allVentas.add({
+                'miembro': correo,
+                'producto': venta['producto'] ?? 'Sin especificar',
+                'cantidad': venta['cantidad'] ?? 0,
+                'precio': venta['precio'] ?? 0,
+                'total': venta['total'] ?? 0,
+                'timestamp': timestamp,
+              });
+            }
           }
         } catch (e) {
           print('Error obteniendo ventas de $correo: $e');
@@ -108,7 +112,6 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
               .collection('liderazgo_comunitario')
               .doc(correo)
               .collection('gastos')
-              .orderBy('timestamp', descending: true)
               .get();
 
           print('  Gastos encontrados: ${gastosSnapshot.docs.length}');
@@ -118,12 +121,17 @@ class _LiderLiderazgoViewState extends State<LiderLiderazgoView> {
             final timestamp = (data['timestamp'] is Timestamp) 
                 ? data['timestamp'] as Timestamp 
                 : Timestamp.now();
-            allGastos.add({
-              'miembro': correo,
-              'concepto': data['concepto'] ?? 'Sin especificar',
-              'monto': data['monto'] ?? 0,
-              'timestamp': timestamp,
-            });
+            
+            // Los gastos están en una lista dentro del documento
+            final gastosList = List<Map<String, dynamic>>.from(data['gastos'] ?? []);
+            for (var gasto in gastosList) {
+              allGastos.add({
+                'miembro': correo,
+                'concepto': gasto['concepto'] ?? gasto.entries.map((e) => '${e.key}: ${e.value}').join(', ') ?? 'Sin especificar',
+                'monto': 0.0, // Los gastos están separados por categoría
+                'timestamp': timestamp,
+              });
+            }
           }
         } catch (e) {
           print('Error obteniendo gastos de $correo: $e');

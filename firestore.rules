@@ -64,10 +64,26 @@ service cloud.firestore {
     }
 
     // ================== COLECCIÓN: liderazgo_comunitario/{userEmail} - Documento raíz ==================
-    // Permitir lectura de documentos raíz y subcollecciones
-    match /liderazgo_comunitario/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if false;
+    // Permitir lectura y escritura de documentos raíz y subcollecciones
+    match /liderazgo_comunitario/{userEmail} {
+      allow read: if request.auth != null && (request.auth.token.email == userEmail || isLider());
+      allow write: if request.auth != null && request.auth.token.email == userEmail;
+      
+      // Subcollecciones de liderazgo
+      match /ventas/{ventaId} {
+        allow read: if request.auth != null && (request.auth.token.email == userEmail || isLider());
+        allow create, update, delete: if request.auth != null && request.auth.token.email == userEmail;
+      }
+      
+      match /gastos/{gastoId} {
+        allow read: if request.auth != null && (request.auth.token.email == userEmail || isLider());
+        allow create, update, delete: if request.auth != null && request.auth.token.email == userEmail;
+      }
+      
+      match /gestion_financiera/{docId} {
+        allow read: if request.auth != null && (request.auth.token.email == userEmail || isLider());
+        allow create, update, delete: if request.auth != null && request.auth.token.email == userEmail;
+      }
     }
 
     // ================== COLECCIONES DE TURISMO ==================

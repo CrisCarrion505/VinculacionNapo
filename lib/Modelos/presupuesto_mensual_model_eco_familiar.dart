@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class PresupuestoComunidad {
   String id;
   String userId;
+  String nombreUsuario;
   List<Map<String, dynamic>> ingresos;
   List<Map<String, dynamic>> egresos;
   List<Map<String, dynamic>> ahorros;
@@ -17,6 +18,7 @@ class PresupuestoComunidad {
   PresupuestoComunidad({
     this.id = '',
     required this.userId,
+    this.nombreUsuario = 'Desconocido',
     required this.ingresos,
     required this.egresos,
     required this.ahorros,
@@ -33,6 +35,7 @@ class PresupuestoComunidad {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
+      'nombreUsuario': nombreUsuario,
       'ingresos': ingresos,
       'egresos': egresos,
       'ahorros': ahorros,
@@ -42,7 +45,7 @@ class PresupuestoComunidad {
       'totalAhorros': totalAhorros,
       'totalInversiones': totalInversiones,
       'saldoFinal': saldoFinal,
-      'fecha': fecha.toIso8601String(),
+      'fecha': Timestamp.fromDate(fecha),
     };
   }
 
@@ -50,6 +53,7 @@ class PresupuestoComunidad {
   return PresupuestoComunidad(
     id: id,
     userId: json['userId'],
+    nombreUsuario: json['nombreUsuario'] ?? 'Desconocido',
     ingresos: List<Map<String, dynamic>>.from(json['ingresos'] ?? []),
     egresos: List<Map<String, dynamic>>.from(json['egresos'] ?? []),
     ahorros: List<Map<String, dynamic>>.from(json['ahorros'] ?? []),

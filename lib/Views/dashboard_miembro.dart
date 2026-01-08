@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto_vinculacion/Views/Login.dart';
 import 'Miembro/usuario_eco_familiar.dart';
 import 'Miembro/usuario_liderazgo_comunitario.dart';
 import 'Miembro/usuario_gestion_turistica.dart' as turismo;
@@ -14,6 +16,20 @@ class DashboardMiembro extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Dashboard - Miembro'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(

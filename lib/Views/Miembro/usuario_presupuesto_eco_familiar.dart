@@ -35,14 +35,14 @@ class _PresupuestoCompletoState extends State<PresupuestoCompleto> {
     });
 
     try {
-      final correo = FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
       final totalIngresos = _calcularTotal(widget.ingresos);
       final totalEgresos = _calcularTotal(widget.egresos);
       final totalAhorros = _calcularTotal(widget.ahorros);
       final totalInversiones = _calcularTotal(widget.inversiones);
 
       final presupuesto = PresupuestoComunidad(
-        userId: correo,
+        userId: userId,
         ingresos: widget.ingresos,
         egresos: widget.egresos,
         ahorros: widget.ahorros,
