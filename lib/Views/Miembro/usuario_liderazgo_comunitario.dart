@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:proyecto_vinculacion/Modelos/liderazgo_model.dart';
 import 'package:proyecto_vinculacion/Servicios/liderazgo_service.dart';
 import 'package:proyecto_vinculacion/validar_cedula_ecuador.dart';
@@ -54,26 +56,44 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
   }
 
   void _validarCedula() {
-    if (_cedulaController.text.isNotEmpty) {
+    final texto = _cedulaController.text.trim();
+    if (texto.isNotEmpty) {
+      final msg = ValidarCedulaEcuador.validarConMensaje(texto);
       setState(() {
-        _cedulaError = ValidarCedulaEcuador.validarConMensaje(_cedulaController.text);
+        _cedulaError = msg;
+        // si hay cédula válida o no vacía, RUC deja de ser obligatorio
+        _rucError = null;
       });
     } else {
       setState(() {
         _cedulaError = null;
       });
+      // si la cédula se borra y hay texto en ruc, validar ruc
+      if (_rucController.text.isNotEmpty) _validarRUC();
     }
   }
 
   void _validarRUC() {
-    if (_rucController.text.isNotEmpty && _rucController.text.length != 13) {
-      setState(() {
-        _rucError = 'El RUC debe tener 13 dígitos';
-      });
+    final texto = _rucController.text.trim();
+    if (texto.isNotEmpty) {
+      if (texto.length != 13) {
+        setState(() {
+          _rucError = 'El RUC debe tener 13 dígitos';
+          // si hay RUC, cédula deja de ser obligatoria
+          _cedulaError = null;
+        });
+      } else {
+        setState(() {
+          _rucError = null;
+          _cedulaError = null;
+        });
+      }
     } else {
       setState(() {
         _rucError = null;
       });
+      // si ruc se borra y hay texto en cedula, validar cedula
+      if (_cedulaController.text.isNotEmpty) _validarCedula();
     }
   }
 
@@ -133,6 +153,29 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
     }
 
     final total = cantidad * precio;
+
+    // Si el número de registro está vacío, calcular el siguiente contador automáticamente
+    if (_registroVentasController.text.trim().isEmpty) {
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && user.email != null) {
+          final correo = user.email!.toLowerCase();
+          FirebaseFirestore.instance
+              .collection('liderazgo_comunitario')
+              .doc(correo)
+              .collection('ventas')
+              .get()
+              .then((ventasSnapshot) {
+            final nextNum = ventasSnapshot.size + 1;
+            setState(() {
+              _registroVentasController.text = nextNum.toString();
+            });
+          });
+        }
+      } catch (_) {
+        // Silenciar error; no bloquear la agregación de la venta
+      }
+    }
 
     setState(() {
       _ventas.add({
@@ -209,22 +252,32 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
   }
 
   Future<void> _guardarRegistroVentas() async {
-    // Validar campos obligatorios
-    if (_cedulaController.text.isEmpty) {
-      setState(() {
-        _cedulaError = 'La cédula es obligatoria';
-      });
-    }
-    
-    if (_rucController.text.isEmpty) {
-      setState(() {
-        _rucError = 'El RUC es obligatorio';
-      });
+    // Validar que exista al menos cédula o RUC (advertencia, no marcar en rojo)
+    final cedula = _cedulaController.text.trim();
+    final ruc = _rucController.text.trim();
+
+    if (cedula.isEmpty && ruc.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Advertencia: ingrese Cédula o RUC (al menos uno)"))
+      );
+      return;
     }
 
-    if (_cedulaController.text.isEmpty || _rucController.text.isEmpty || _cedulaError != null || _rucError != null) {
+    // Validar formato si se ingresó cédula
+    if (cedula.isNotEmpty) {
+      final cedulaMsg = ValidarCedulaEcuador.validarConMensaje(cedula);
+      if (cedulaMsg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cédula inválida: $cedulaMsg'))
+        );
+        return;
+      }
+    }
+
+    // Validar RUC si se ingresó
+    if (ruc.isNotEmpty && ruc.length != 13) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Complete los campos obligatorios correctamente"))
+        const SnackBar(content: Text('RUC inválido: debe tener 13 dígitos'))
       );
       return;
     }
@@ -245,6 +298,21 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
     }
 
     final correo = user.email!.toLowerCase();
+
+    // Si no tiene número de registro, calcular contador automático
+    if (_registroVentasController.text.trim().isEmpty) {
+      try {
+        final ventasSnapshot = await FirebaseFirestore.instance
+            .collection('liderazgo_comunitario')
+            .doc(correo)
+            .collection('ventas')
+            .get();
+        final nextNum = ventasSnapshot.size + 1;
+        _registroVentasController.text = nextNum.toString();
+      } catch (_) {
+        // Si falla, dejar en blanco y seguir (no bloquear)
+      }
+    }
 
     final registro = RegistroVentasModel(
       correo: correo,
@@ -473,11 +541,32 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
           ),
           const SizedBox(height: 15),
           
-          _buildTextField(
-            "Fecha de Venta", 
-            _fechaVentaController, 
-            Icons.calendar_today, 
-            TextInputType.datetime
+          // Fecha con DatePicker (readOnly)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 15),
+            child: TextField(
+              controller: _fechaVentaController,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Fecha de Venta',
+                prefixIcon: const Icon(Icons.calendar_today),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onTap: () async {
+                final now = DateTime.now();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: now,
+                  firstDate: DateTime(now.year - 5),
+                  lastDate: DateTime(now.year + 5),
+                );
+                if (picked != null) {
+                  _fechaVentaController.text = '${picked.year}-${picked.month.toString().padLeft(2,'0')}-${picked.day.toString().padLeft(2,'0')}';
+                }
+              },
+            ),
           ),
           _buildTextField(
             "Producto vendido", 
@@ -485,6 +574,7 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
             Icons.shopping_bag, 
             TextInputType.text,
             errorText: _productoServicioError,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ ]"))],
           ),
           _buildTextField(
             "Servicio vendido", 
@@ -492,18 +582,21 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
             Icons.room_service, 
             TextInputType.text,
             errorText: _productoServicioError,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ ]"))],
           ),
           _buildTextField(
             "Cantidad *", 
             _cantidadController, 
             Icons.numbers, 
             TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           _buildTextField(
             "Precio unitario *", 
             _precioController, 
             Icons.attach_money, 
             TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           
           const SizedBox(height: 15),
@@ -613,6 +706,7 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
             Icons.inventory, 
             TextInputType.number,
             errorText: _materiaPrimaSalariosError,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           _buildTextField(
             "Salarios del personal *", 
@@ -620,30 +714,35 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
             Icons.people, 
             TextInputType.number,
             errorText: _materiaPrimaSalariosError,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           _buildTextField(
             "Servicios públicos", 
             _serviciosPublicosController, 
             Icons.electrical_services, 
-            TextInputType.number
+            TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           _buildTextField(
             "Comisiones", 
             _comisionesController, 
             Icons.monetization_on, 
-            TextInputType.number
+            TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           _buildTextField(
             "Publicidad", 
             _publicidadController, 
             Icons.campaign, 
-            TextInputType.number
+            TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           _buildTextField(
             "Alquiler", 
             _alquilerController, 
             Icons.home, 
-            TextInputType.number
+            TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
           
           const SizedBox(height: 15),
@@ -744,13 +843,14 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
     TextEditingController controller, 
     IconData icon, 
     TextInputType tipo, 
-    {String? errorText, int maxLines = 1}
+    {String? errorText, int maxLines = 1, List<TextInputFormatter>? inputFormatters}
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: TextField(
         controller: controller,
         keyboardType: tipo,
+        inputFormatters: inputFormatters,
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
@@ -773,13 +873,14 @@ class _LiderazgoComunitarioState extends State<LiderazgoComunitario>
     TextEditingController controller, 
     IconData icon, 
     TextInputType tipo, 
-    {String? errorText, int maxLines = 1}
+    {String? errorText, int maxLines = 1, List<TextInputFormatter>? inputFormatters}
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: TextField(
         controller: controller,
         keyboardType: tipo,
+        inputFormatters: inputFormatters,
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,

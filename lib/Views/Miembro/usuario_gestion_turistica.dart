@@ -1,7 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:proyecto_vinculacion/Modelos/turismo_model.dart'; 
 import 'package:proyecto_vinculacion/Servicios/turismo_service.dart';
+import 'package:proyecto_vinculacion/validar_cedula_ecuador.dart';
 
 /// Ejemplo de widget con TabBar/TabBarView para cada categoría
 class TurismoComunitario extends StatefulWidget {
@@ -71,6 +74,10 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
         controllers[categoria]!["Nombre"] = TextEditingController();
       }
     });
+
+    // Inicializar valores por defecto para Tipo de servicio (Lugar Turístico)
+    controllers["Lugar Turístico"]!['Tipo de servicio turístico'] ??= TextEditingController();
+    controllers["Lugar Turístico"]!['Horarios de operación'] ??= TextEditingController();
   }
 
   @override
@@ -92,7 +99,33 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
       String value = controllers["Lugar Turístico"]![fieldName]?.text ?? "";
       data[fieldName] = value;
     }
-    final correo = FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
+    final correo = FirebaseAuth.instance.currentUser?.email;
+    if (correo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Usuario no autenticado')));
+      return;
+    }
+
+    // Si no hay número de registro, generar contador automático
+    final regKey = 'Número de registro turístico';
+    if ((data[regKey] ?? '').trim().isEmpty) {
+      try {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('lugares_turisticos')
+            .where('correo', isEqualTo: correo)
+            .get();
+        final next = snapshot.size + 1;
+        data[regKey] = next.toString();
+        controllers['Lugar Turístico']![regKey]!.text = next.toString();
+      } catch (_) {}
+    }
+
+    // Validaciones básicas: tarifa numérica y horarios
+    final tarifa = data['Tarifas por servicio'] ?? '';
+    if (tarifa.isNotEmpty && double.tryParse(tarifa) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tarifa inválida')));
+      return;
+    }
+
     try {
       await FirebaseTurismoService().addLugarTuristico(data, correo);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,7 +147,34 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
       String value = controllers["Registro de visitante"]![fieldName]?.text ?? "";
       data[fieldName] = value;
     }
-    final correo = FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
+    final correo = FirebaseAuth.instance.currentUser?.email;
+    if (correo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Usuario no autenticado')));
+      return;
+    }
+
+    // Validar cédula y teléfono usando utilitarios
+    final cedula = (data['Cédula'] ?? '').trim();
+    final telefono = (data['Teléfono'] ?? '').trim();
+
+    // Cédula: usar el validador centralizado
+    final cedulaMsg = ValidarCedulaEcuador.validarConMensaje(cedula);
+    if (cedulaMsg != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cédula inválida: $cedulaMsg')));
+      return;
+    }
+
+    // Teléfono: obligatorio y sólo dígitos entre 7 y 15 caracteres
+    if (telefono.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El teléfono es obligatorio')));
+      return;
+    }
+    final phoneValid = RegExp(r'^\d{7,15}$');
+    if (!phoneValid.hasMatch(telefono)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Teléfono inválido: debe tener 7 a 15 dígitos numéricos')));
+      return;
+    }
+
     try {
       await FirebaseTurismoService().addRegistroVisitante(data, correo);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -281,20 +341,152 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
               ],
             ),
             const SizedBox(height: 8),
-            // TextField debajo del nombre
-            TextField(
-              controller: controllers[categoria]![fieldName],
-              keyboardType: TextInputType.text,
-              style: const TextStyle(color: Colors.black),
-              decoration: InputDecoration(
-                hintText: "Ingrese...",
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            // Campo especializado según categoría y nombre
+            if (categoria == 'Lugar Turístico') ...[
+              if (fieldName == 'Número de registro turístico')
+                TextField(
+                  controller: controllers[categoria]![fieldName],
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'Se asigna automáticamente si queda vacío',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                )
+              else if (fieldName == 'Tipo de servicio turístico')
+                Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: controllers[categoria]![fieldName]!.text.isEmpty ? null : controllers[categoria]![fieldName]!.text,
+                      items: [
+                        'Albergues',
+                        'Hospedajes rurales',
+                        'Rutas de turismo vivencial',
+                        'Experiencias astronómicas autóctonas',
+                        'Artesanía local',
+                        'Productos locales',
+                        'Patrimonio natural',
+                        'Otro',
+                      ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: (v) {
+                        setState(() {
+                          controllers[categoria]![fieldName]!.text = v ?? '';
+                          if (v != null && v != 'Otro') {
+                            controllers[categoria]!['TipoServicioOtro']?.text = '';
+                          }
+                        });
+                      },
+                      decoration: const InputDecoration(border: OutlineInputBorder(), filled: true, fillColor: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    if (controllers[categoria]!['Tipo de servicio turístico']!.text == 'Otro')
+                      TextField(
+                        controller: controllers[categoria]!['TipoServicioOtro'] ??= TextEditingController(),
+                        decoration: const InputDecoration(
+                          hintText: 'Especifique otro tipo de servicio',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      ),
+                  ],
+                )
+              else if (fieldName == 'Tarifas por servicio')
+                TextField(
+                  controller: controllers[categoria]![fieldName],
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                  decoration: InputDecoration(
+                    hintText: 'Ingrese tarifa numérica',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                )
+              else if (fieldName == 'Horarios de operación')
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: controllers[categoria]![fieldName],
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          hintText: 'Inicio - Fin (HH:MM - HH:MM)',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onTap: () async {
+                          final start = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                          if (start != null) {
+                            final end = await showTimePicker(context: context, initialTime: TimeOfDay(hour: start.hour + 1, minute: start.minute));
+                            if (end != null) {
+                              controllers[categoria]![fieldName]!.text = '${start.format(context)} - ${end.format(context)}';
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                )
+              else
+                TextField(
+                  controller: controllers[categoria]![fieldName],
+                  keyboardType: TextInputType.text,
+                  style: const TextStyle(color: Colors.black),
+                  decoration: InputDecoration(
+                    hintText: "Ingrese...",
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                )
+            ] else if (categoria == 'Registro de visitante') ...[
+              if (fieldName == 'Cédula')
+                TextField(
+                  controller: controllers[categoria]![fieldName],
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(hintText: 'Ingrese cédula', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                )
+              else if (fieldName == 'Teléfono')
+                TextField(
+                  controller: controllers[categoria]![fieldName],
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(hintText: 'Ingrese teléfono (solo números)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                )
+              else
+                TextField(
+                  controller: controllers[categoria]![fieldName],
+                  keyboardType: TextInputType.text,
+                  style: const TextStyle(color: Colors.black),
+                  decoration: InputDecoration(
+                    hintText: "Ingrese...",
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                )
+            ] else
+              TextField(
+                controller: controllers[categoria]![fieldName],
+                keyboardType: TextInputType.text,
+                style: const TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  hintText: "Ingrese...",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
-            )
+              )
           ],
         ),
       );

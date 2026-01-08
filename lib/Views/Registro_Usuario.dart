@@ -47,10 +47,21 @@ class _RegisterPageState extends State<RegisterPage> {
       return '⚠️ Por favor ingresa una contraseña';
     }
     
-    if (value.length < 6) {
-      return '⚠️ La contraseña debe tener al menos 6 caracteres';
+    // Requisitos: mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 carácter especial
+    if (value.length < 8) {
+      return '⚠️ La contraseña debe tener al menos 8 caracteres';
     }
-    
+
+    final upper = RegExp(r'[A-Z]');
+    final lower = RegExp(r'[a-z]');
+    final digit = RegExp(r'\d');
+    final special = RegExp(r'[!@#$%^&*()\,.?":{}|<>\[\];_\-=+/]');
+
+    if (!upper.hasMatch(value)) return '⚠️ La contraseña debe tener al menos una letra mayúscula';
+    if (!lower.hasMatch(value)) return '⚠️ La contraseña debe tener al menos una letra minúscula';
+    if (!digit.hasMatch(value)) return '⚠️ La contraseña debe incluir al menos un número';
+    if (!special.hasMatch(value)) return '⚠️ La contraseña debe incluir al menos un carácter especial';
+
     return null;
   }
 
@@ -59,10 +70,16 @@ class _RegisterPageState extends State<RegisterPage> {
       return '⚠️ Por favor ingresa tu nombre';
     }
     
-    if (value.length < 3) {
+    // No permitir números en el nombre
+    final hasDigits = RegExp(r'\d');
+    if (hasDigits.hasMatch(value)) {
+      return '⚠️ El nombre no debe contener números';
+    }
+
+    if (value.trim().length < 3) {
       return '⚠️ El nombre debe tener al menos 3 caracteres';
     }
-    
+
     return null;
   }
 
@@ -226,7 +243,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         filled: true,
                         fillColor: Colors.white,
                         labelText: 'Contraseña',
-                        hintText: 'Mínimo 6 caracteres',
+                        hintText: 'Ingresar Contraseña',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
