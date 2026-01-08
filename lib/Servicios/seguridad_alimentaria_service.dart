@@ -85,6 +85,63 @@ class SeguridadAlimentariaService {
     }
   }
 
+  /// Obtener todos los reportes (útil para vistas de líder)
+  Future<List<SeguridadAlimentariaModel>> obtenerTodosReportes() async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection(_collectionName)
+          .orderBy('fechaRegistro', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        return SeguridadAlimentariaModel.fromJson(
+            doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      throw Exception('Error al obtener todos los reportes: $e');
+    }
+  }
+
+  /// Buscar reportes por alimento, proveedor o teléfono (filtrado cliente para búsquedas simples)
+  Future<List<SeguridadAlimentariaModel>> buscarReportes({
+    String? alimento,
+    String? proveedor,
+    String? telefono,
+  }) async {
+    try {
+      CollectionReference col = _firestore.collection(_collectionName);
+
+      // Obtiene un conjunto razonable de registros recientes y aplica filtro en cliente
+      QuerySnapshot querySnapshot = await col
+          .orderBy('fechaRegistro', descending: true)
+          .limit(500)
+          .get();
+
+      final results = querySnapshot.docs.map((doc) {
+        return SeguridadAlimentariaModel.fromJson(
+            doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+
+      final filtered = results.where((r) {
+        final matchAlimento = (alimento == null || alimento.isEmpty)
+            ? true
+            : r.alimentoEscaso.toLowerCase().contains(alimento.toLowerCase());
+        final matchProveedor = (proveedor == null || proveedor.isEmpty)
+            ? true
+            : r.nombreProveedor.toLowerCase().contains(proveedor.toLowerCase());
+        final matchTelefono = (telefono == null || telefono.isEmpty)
+            ? true
+            : r.telefonoProveedor.toLowerCase().contains(telefono.toLowerCase());
+
+        return matchAlimento && matchProveedor && matchTelefono;
+      }).toList();
+
+      return filtered;
+    } catch (e) {
+      throw Exception('Error al buscar reportes: $e');
+    }
+  }
+
   /// Obtener estadísticas de alimentos escasos
   Future<Map<String, int>> obtenerEstadisticasAlimentos(
       String correo) async {

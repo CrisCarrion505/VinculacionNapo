@@ -90,6 +90,8 @@ class GestionFinancieraModel {
       'reuniones_periodicas': reunionesPeriodicas,
       'resumen_financiero': resumenFinanciero,
       'presupuesto_anual': presupuestoAnual,
+
+      
       'presupuesto_mensual': presupuestoMensual,
       'fondos_emergencia': fondosEmergencia,
       'registros_contables': registrosContables,
