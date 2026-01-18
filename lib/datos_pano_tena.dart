@@ -75,3 +75,60 @@ const List<String> ubicacionesPanoTena = [
   // Administración
   'GAD Parroquial Pano',
 ];
+
+/// Mapeo de tipos de servicio turístico a ubicaciones disponibles
+const Map<String, List<String>> servicioUbicacionesMap = {
+  'Albergues': [
+    'Hostería Napusamai Pasourcu Lodge',
+  ],
+  'Hospedajes rurales': [
+    'Hospedaje Alto Pano',
+    'Hospedaje Pano Centro',
+  ],
+  'Rutas de turismo vivencial': [
+    'Ruta Bosque de los Sueños',
+    'Ruta Cascada Achiyacu',
+  ],
+  'Experiencias astronómicas autóctonas': [
+    'Mirador Rayuurcu',
+    'Mirador Sacha Urco',
+  ],
+  'Artesanía local': [
+    'Centro Artesanal Alto Pano',
+    'Centro Artesanal Pano',
+  ],
+  'Productos locales': [
+    'Mercado Pano',
+    'Tienda Local Pano',
+  ],
+  'Patrimonio natural': [
+    'Petroglifo Pumarumi',
+    'Rumi Cocha',
+    'Cañón Supaypaccha Uctu',
+  ],
+  'Balnearios': [
+    'Balneario Juan Bueno',
+    'Balneario Lagartococha',
+    'Balneario Pano',
+    'Balneario Pikitzacocha',
+    'Balneario Puka Urku',
+    'Balneario Pumarumi',
+    'Balneario Rumicocha',
+    'Balneario San Andrés',
+    'Balneario San Bartolomé de Imbu',
+    'Balneario San Carlos',
+    'Balneario Yaracocha',
+  ],
+};
+
+/// Lista de tipos de servicios turísticos disponibles
+const List<String> tiposServicioTuristico = [
+  'Albergues',
+  'Hospedajes rurales',
+  'Rutas de turismo vivencial',
+  'Experiencias astronómicas autóctonas',
+  'Artesanía local',
+  'Productos locales',
+  'Patrimonio natural',
+  'Balnearios',
+];

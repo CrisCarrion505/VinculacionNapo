@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:proyecto_vinculacion/datos_pano_tena.dart';
 import 'Login.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -21,6 +22,13 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isObscureConfirm = true;
   bool _isLoading = false;
   String _selectedRole = 'Miembro'; // Por defecto
+  
+  // Variables para servicios y ubicaciones (solo para Miembro)
+  Set<String> _serviciosSeleccionados = {};
+  Set<String> _ubicacionesSeleccionadas = {};
+  List<String> _ubicacionesFiltradas = [];
+  final TextEditingController _otroServicioController = TextEditingController();
+  final TextEditingController _otroUbicacionController = TextEditingController();
   
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -85,6 +93,27 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _signUp() async {
     if (_formKey.currentState!.validate()) {
+      // Si es Miembro, validar que seleccione servicios y ubicaciones
+      if (_selectedRole == 'Miembro' && _serviciosSeleccionados.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Debes seleccionar al menos un servicio turístico'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      if (_selectedRole == 'Miembro' && _ubicacionesSeleccionadas.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Debes seleccionar al menos una ubicación'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
       if (_passwordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -106,13 +135,34 @@ class _RegisterPageState extends State<RegisterPage> {
           password: _passwordController.text.trim(),
         );
 
-        // Guardar información del usuario en Firestore
-        await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
+        // Preparar datos del usuario
+        Map<String, dynamic> userData = {
           'nombre': _nameController.text.trim(),
           'correo': _emailController.text.trim(),
           'role': _selectedRole,
           'fechaRegistro': DateTime.now(),
-        });
+        };
+
+        // Si es Miembro, agregar servicios y ubicaciones
+        if (_selectedRole == 'Miembro') {
+          // Incluir servicios personalizados si los hay
+          List<String> serviciosFinal = List.from(_serviciosSeleccionados);
+          if (_otroServicioController.text.trim().isNotEmpty) {
+            serviciosFinal.add(_otroServicioController.text.trim());
+          }
+
+          // Incluir ubicaciones personalizadas si las hay
+          List<String> ubicacionesFinal = List.from(_ubicacionesSeleccionadas);
+          if (_otroUbicacionController.text.trim().isNotEmpty) {
+            ubicacionesFinal.add(_otroUbicacionController.text.trim());
+          }
+
+          userData['serviciosAsignados'] = serviciosFinal;
+          userData['ubicacionesAsignadas'] = ubicacionesFinal;
+        }
+
+        // Guardar información del usuario en Firestore
+        await _firestore.collection('usuarios').doc(userCredential.user!.uid).set(userData);
 
         if (!mounted) return;
 
@@ -172,6 +222,23 @@ class _RegisterPageState extends State<RegisterPage> {
         }
       }
     }
+  }
+
+  /// Actualizar ubicaciones filtradas cuando cambian los servicios
+  void _actualizarUbicacionesFiltradas() {
+    Set<String> ubicacionesFiltradas = {};
+    
+    for (String servicio in _serviciosSeleccionados) {
+      if (servicioUbicacionesMap.containsKey(servicio)) {
+        ubicacionesFiltradas.addAll(servicioUbicacionesMap[servicio]!);
+      }
+    }
+
+    setState(() {
+      _ubicacionesFiltradas = ubicacionesFiltradas.toList()..sort();
+      // Remover ubicaciones que ya no son válidas
+      _ubicacionesSeleccionadas.retainWhere((u) => ubicacionesFiltradas.contains(u));
+    });
   }
 
   @override
@@ -315,6 +382,134 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                       ),
                     ),
+                    // Mostrar selectores de servicios y ubicaciones solo para Miembro
+                    if (_selectedRole == 'Miembro') ...[
+                      const SizedBox(height: 20),
+                      // Selector de Servicios Turísticos
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Elegir servicio turístico',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: tiposServicioTuristico.map((servicio) {
+                                final isSelected = _serviciosSeleccionados.contains(servicio);
+                                return FilterChip(
+                                  label: Text(servicio),
+                                  selected: isSelected,
+                                  onSelected: (bool selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _serviciosSeleccionados.add(servicio);
+                                      } else {
+                                        _serviciosSeleccionados.remove(servicio);
+                                      }
+                                      _actualizarUbicacionesFiltradas();
+                                    });
+                                  },
+                                  backgroundColor: Colors.grey[200],
+                                  selectedColor: Colors.teal[300],
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _otroServicioController,
+                              decoration: InputDecoration(
+                                hintText: 'Otro servicio (opcional)',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                prefixIcon: const Icon(Icons.add, color: Colors.teal),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Selector de Ubicaciones
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Elegir ubicación',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (_ubicacionesFiltradas.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text(
+                                  'Selecciona servicios primero',
+                                  style: TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _ubicacionesFiltradas.map((ubicacion) {
+                                  final isSelected = _ubicacionesSeleccionadas.contains(ubicacion);
+                                  return FilterChip(
+                                    label: Text(ubicacion, overflow: TextOverflow.ellipsis),
+                                    selected: isSelected,
+                                    onSelected: (bool selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _ubicacionesSeleccionadas.add(ubicacion);
+                                        } else {
+                                          _ubicacionesSeleccionadas.remove(ubicacion);
+                                        }
+                                      });
+                                    },
+                                    backgroundColor: Colors.grey[200],
+                                    selectedColor: Colors.blue[300],
+                                  );
+                                }).toList(),
+                              ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _otroUbicacionController,
+                              decoration: InputDecoration(
+                                hintText: 'Otra ubicación (opcional)',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                prefixIcon: const Icon(Icons.location_on, color: Colors.teal),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     _isLoading
                         ? const CircularProgressIndicator(
@@ -364,6 +559,8 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _otroServicioController.dispose();
+    _otroUbicacionController.dispose();
     super.dispose();
   }
 }

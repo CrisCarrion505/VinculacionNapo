@@ -20,6 +20,10 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
   String? _tipoServicioSeleccionado;
   String? _ubicacionSeleccionada;
 
+  // Variables para filtrar servicios según el usuario
+  List<String> _serviciosAsignados = [];
+  List<String> _ubicacionesAsignadas = [];
+
   // Lista de tipos de servicio
   final List<String> _tiposServicio = [
     'Albergues',
@@ -129,6 +133,40 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
     // Inicializar valores por defecto para Tipo de servicio (Lugar Turístico)
     controllers["Lugar Turístico"]!['Tipo de servicio turístico'] ??= TextEditingController();
     controllers["Lugar Turístico"]!['Horarios de operación'] ??= TextEditingController();
+
+    // Cargar servicios y ubicaciones asignadas del usuario
+    _cargarServiciosAsignados();
+  }
+
+  /// Cargar los servicios y ubicaciones asignadas al usuario durante el registro
+  Future<void> _cargarServiciosAsignados() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        setState(() {
+          _serviciosAsignados = List<String>.from(data['serviciosAsignados'] ?? []);
+          _ubicacionesAsignadas = List<String>.from(data['ubicacionesAsignadas'] ?? []);
+
+          // Si el usuario tiene servicios asignados, filtrar los tipos de servicio
+          if (_serviciosAsignados.isNotEmpty) {
+            // Mantener solo los servicios que están en la lista de servicios asignados
+            _tiposServicio.retainWhere((servicio) => 
+              _serviciosAsignados.contains(servicio)
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error cargando servicios asignados: $e');
+    }
   }
 
   @override
@@ -301,6 +339,16 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
   /// Método para construir el formulario de los dos primeros tabs (Lugar Turístico y Registro de visitante)
   /// Construir el formulario especializado para "Registro de visitante" con selección de servicio y ubicación
   Widget _buildRegistroVisitanteTab() {
+    // Filtrar servicios según los asignados al usuario
+    List<String> serviciosDisponibles = _serviciosAsignados.isNotEmpty 
+        ? _tiposServicio.where((s) => _serviciosAsignados.contains(s)).toList()
+        : _tiposServicio;
+
+    // Filtrar ubicaciones según las asignadas al usuario
+    List<String> ubicacionesDisponibles = _ubicacionesAsignadas.isNotEmpty
+        ? _ubicacionesAsignadas
+        : (_servicioUbicaciones[_tipoServicioSeleccionado] ?? []);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -330,7 +378,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _tipoServicioSeleccionado,
+                  initialValue: _tipoServicioSeleccionado,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -339,7 +387,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                     filled: true,
                     fillColor: Colors.grey.shade100,
                   ),
-                  items: _tiposServicio.map((servicio) {
+                  items: serviciosDisponibles.map((servicio) {
                     return DropdownMenuItem<String>(
                       value: servicio,
                       child: Text(servicio),
@@ -390,7 +438,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _ubicacionSeleccionada,
+                    initialValue: _ubicacionSeleccionada,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -399,7 +447,7 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                       filled: true,
                       fillColor: Colors.grey.shade100,
                     ),
-                    items: (_servicioUbicaciones[_tipoServicioSeleccionado] ?? [])
+                    items: ubicacionesDisponibles
                         .map((ubicacion) {
                       return DropdownMenuItem<String>(
                         value: ubicacion,
@@ -521,15 +569,21 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                 Column(
                   children: [
                     DropdownButtonFormField<String>(
-                      value: controllers[categoria]![fieldName]!.text.isEmpty ? null : controllers[categoria]![fieldName]!.text,
+                      initialValue: controllers[categoria]![fieldName]!.text.isEmpty ? null : controllers[categoria]![fieldName]!.text,
                       items: [
-                        'Albergues',
-                        'Hospedajes rurales',
-                        'Rutas de turismo vivencial',
-                        'Experiencias astronómicas autóctonas',
-                        'Artesanía local',
-                        'Productos locales',
-                        'Patrimonio natural',
+                        // Mostrar solo servicios asignados si existen
+                        if (_serviciosAsignados.isNotEmpty)
+                          ..._serviciosAsignados
+                        else
+                          ...[
+                            'Albergues',
+                            'Hospedajes rurales',
+                            'Rutas de turismo vivencial',
+                            'Experiencias astronómicas autóctonas',
+                            'Artesanía local',
+                            'Productos locales',
+                            'Patrimonio natural',
+                          ],
                         'Otro',
                       ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                       onChanged: (v) {
@@ -772,12 +826,17 @@ void limpiarCampos() {
   Widget _buildUbicacionAutocompletado(String categoria, String fieldName) {
     final controller = controllers[categoria]![fieldName]!;
     
+    // Usar ubicaciones asignadas si existen, de lo contrario usar todas
+    final ubicacionesDisponibles = _ubicacionesAsignadas.isNotEmpty
+        ? _ubicacionesAsignadas
+        : ubicacionesPanoTena;
+    
     return Autocomplete<String>(
       optionsBuilder: (TextEditingValue textEditingValue) {
         if (textEditingValue.text.isEmpty) {
           return const Iterable<String>.empty();
         }
-        return ubicacionesPanoTena.where((String option) {
+        return ubicacionesDisponibles.where((String option) {
           return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
         });
       },

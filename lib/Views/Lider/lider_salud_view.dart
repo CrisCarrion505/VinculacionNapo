@@ -139,7 +139,7 @@ class _LiderSaludViewState
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _buscarRangoEdadController.text.isEmpty
+                  initialValue: _buscarRangoEdadController.text.isEmpty
                       ? null
                       : _buscarRangoEdadController.text,
                   items: ['Bebés', 'Niños', 'Adolescentes', 'Adultos', 'Adultos mayores']
@@ -358,7 +358,7 @@ class _LiderSaludViewState
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         );
