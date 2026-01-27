@@ -167,6 +167,30 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
     } catch (e) {
       print('Error cargando servicios asignados: $e');
     }
+    
+    // Cargar número de registro automático
+    _cargarNumeroRegistroAutomatico();
+  }
+
+  /// Cargar el número de registro automático para Lugar Turístico
+  Future<void> _cargarNumeroRegistroAutomatico() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final correo = user?.email;
+    if (correo == null) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('lugares_turisticos')
+          .where('correo', isEqualTo: correo)
+          .get();
+      
+      final nextNumber = snapshot.size + 1;
+      setState(() {
+        controllers['Lugar Turístico']!['Número de registro turístico']!.text = nextNumber.toString();
+      });
+    } catch (e) {
+      print('Error cargando número de registro: $e');
+    }
   }
 
   @override
@@ -666,18 +690,72 @@ class _TurismoComunitarioState extends State<TurismoComunitario> {
                 )
             ] else if (categoria == 'Registro de visitante') ...[
               if (fieldName == 'Cédula')
-                TextField(
-                  controller: controllers[categoria]![fieldName],
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(hintText: 'Ingrese cédula', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controllers[categoria]![fieldName],
+                      keyboardType: TextInputType.number,
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Ingrese cédula de 10 dígitos',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        counterText: '',
+                      ),
+                    ),
+                    if (controllers[categoria]![fieldName]!.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          _validarMensajeCedula(controllers[categoria]![fieldName]!.text),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: ValidarCedulaEcuador.validar(controllers[categoria]![fieldName]!.text)
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        ),
+                      ),
+                  ],
                 )
               else if (fieldName == 'Teléfono')
-                TextField(
-                  controller: controllers[categoria]![fieldName],
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(hintText: 'Ingrese teléfono (solo números)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controllers[categoria]![fieldName],
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Ingrese teléfono (7-15 dígitos)',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    if (controllers[categoria]![fieldName]!.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          _validarMensajeTelefono(controllers[categoria]![fieldName]!.text),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _validarTelefono(controllers[categoria]![fieldName]!.text)
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        ),
+                      ),
+                  ],
                 )
               else
                 TextField(
@@ -821,6 +899,28 @@ void limpiarCampos() {
     const SnackBar(content: Text("Campos limpiados"))
   );
 }
+
+  /// Validar teléfono
+  bool _validarTelefono(String telefono) {
+    return RegExp(r'^\d{7,15}$').hasMatch(telefono.trim());
+  }
+
+  /// Obtener mensaje de validación de teléfono
+  String _validarMensajeTelefono(String telefono) {
+    final trimmed = telefono.trim();
+    if (trimmed.isEmpty) return 'El teléfono es obligatorio';
+    if (!RegExp(r'^[0-9]*$').hasMatch(trimmed)) return '❌ Solo se permiten números';
+    if (trimmed.length < 7) return '❌ Mínimo 7 dígitos';
+    if (trimmed.length > 15) return '❌ Máximo 15 dígitos';
+    return '✓ Teléfono válido';
+  }
+
+  /// Obtener mensaje de validación de cédula
+  String _validarMensajeCedula(String cedula) {
+    final msg = ValidarCedulaEcuador.validarConMensaje(cedula);
+    if (msg == null) return '✓ Cédula válida';
+    return '❌ $msg';
+  }
 
   /// Widget para autocompletado de ubicaciones en Pano
   Widget _buildUbicacionAutocompletado(String categoria, String fieldName) {
